@@ -170,3 +170,32 @@ class IOFConfigOut(Schema):
     modalidade: str
     caminho: str
     aliquota: Decimal
+
+
+class SimulacaoIn(Schema):
+    cliente_id: int
+    moeda_id: int
+    montante: Decimal
+    parceiro_id: int
+    modalidade: str
+    caminho: str
+    isencao_iof: bool = False
+    isencao_tarifa: bool = False
+    tarifa_negociada: Decimal | None = None
+    moeda_tarifa_negociada: str | None = None
+    ptax: Decimal | None = None
+    spot: Decimal
+    taxa_cliente: Decimal
+
+
+class SimulacaoOut(Schema):
+    aliquota_iof: Decimal
+    iof_nominal: Decimal
+    tarifa_nominal: Decimal
+    valor_base_brl: Decimal
+    vet: Decimal
+    spread: Decimal
+    spread_com_sinal: Decimal
+    comissao_bruta: Decimal
+    comissao_liquida: Decimal
+    spread_negativo: bool

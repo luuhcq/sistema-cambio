@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMoedas } from '../../hooks/useMoedas'
 import { useParceiros } from '../../hooks/useParceiros'
 import { usePtax } from '../../hooks/usePtax'
 import { useCriarOperacao } from '../../hooks/useOperacoes'
+import { useSimulacao } from '../../hooks/useSimulacao'
+import PreviewCalculo from './PreviewCalculo'
 import api from '../../api/axios'
 
 export default function NovaBoleta({ onSuccess }) {
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
+  const { register, handleSubmit, watch, setValue } = useForm()
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
   const { data: ptaxData } = usePtax()
@@ -18,6 +20,7 @@ export default function NovaBoleta({ onSuccess }) {
   const [clientesResultado, setClientesResultado] = useState([])
   const [erro, setErro] = useState('')
 
+  const watchAll = watch()
   const moedaSelecionada = watch('moeda_id')
   const moedaObj = moedas?.find((m) => m.id === Number(moedaSelecionada))
 
@@ -40,6 +43,32 @@ export default function NovaBoleta({ onSuccess }) {
       setClientesResultado([])
     }
   }, [clienteBusca])
+
+  // Payload de simulação com debounce implícito via React Query
+  const simulacaoPayload = useMemo(() => {
+    if (!clienteSelecionado) return null
+    if (!watchAll.moeda_id || !watchAll.parceiro_id) return null
+    if (!watchAll.montante || !watchAll.spot || !watchAll.taxa_cliente) return null
+    if (!watchAll.modalidade || !watchAll.caminho) return null
+
+    return {
+      cliente_id: clienteSelecionado.id,
+      moeda_id: Number(watchAll.moeda_id),
+      parceiro_id: Number(watchAll.parceiro_id),
+      montante: watchAll.montante,
+      modalidade: watchAll.modalidade,
+      caminho: watchAll.caminho,
+      spot: watchAll.spot,
+      taxa_cliente: watchAll.taxa_cliente,
+      ptax: watchAll.ptax || null,
+      isencao_iof: watchAll.isencao_iof || false,
+      isencao_tarifa: watchAll.isencao_tarifa || false,
+      tarifa_negociada: watchAll.tarifa_negociada || null,
+      moeda_tarifa_negociada: watchAll.moeda_tarifa_negociada || null,
+    }
+  }, [watchAll, clienteSelecionado])
+
+  const { data: simulacao, isLoading: simulacaoLoading } = useSimulacao(simulacaoPayload)
 
   const onSubmit = async (data) => {
     if (!clienteSelecionado) {
@@ -80,172 +109,182 @@ export default function NovaBoleta({ onSuccess }) {
         Nova Boleta
       </h2>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Linha 1: Data, Cliente, Moeda */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>Data</label>
-            <input type="date" {...register('data', { required: true })} className={inputClass} />
-          </div>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Formulário (2 colunas) */}
+        <div className="col-span-2">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Linha 1: Data, Cliente, Moeda */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>Data</label>
+                <input type="date" {...register('data', { required: true })} className={inputClass} />
+              </div>
 
-          <div className="relative">
-            <label className={labelClass}>Cliente (CPF/CNPJ ou Nome)</label>
-            <input
-              type="text"
-              value={clienteBusca}
-              onChange={(e) => {
-                setClienteBusca(e.target.value)
-                setClienteSelecionado(null)
-              }}
-              placeholder="Digite 3+ caracteres..."
-              className={inputClass}
-            />
-            {clienteSelecionado && (
-              <p className="text-xs text-green-600 mt-1">
-                {clienteSelecionado.nome} ({clienteSelecionado.cpf_cnpj})
-              </p>
+              <div className="relative">
+                <label className={labelClass}>Cliente (CPF/CNPJ ou Nome)</label>
+                <input
+                  type="text"
+                  value={clienteBusca}
+                  onChange={(e) => {
+                    setClienteBusca(e.target.value)
+                    setClienteSelecionado(null)
+                  }}
+                  placeholder="Digite 3+ caracteres..."
+                  className={inputClass}
+                />
+                {clienteSelecionado && (
+                  <p className="text-xs text-green-600 mt-1">
+                    {clienteSelecionado.nome} ({clienteSelecionado.cpf_cnpj})
+                  </p>
+                )}
+                {clientesResultado.length > 0 && !clienteSelecionado && (
+                  <ul className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-auto">
+                    {clientesResultado.map((c) => (
+                      <li
+                        key={c.id}
+                        onClick={() => {
+                          setClienteSelecionado(c)
+                          setClienteBusca(c.nome)
+                          setClientesResultado([])
+                        }}
+                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300"
+                      >
+                        {c.cpf_cnpj} - {c.nome}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <label className={labelClass}>Moeda</label>
+                <select {...register('moeda_id', { required: true })} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  {moedas?.map((m) => (
+                    <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Linha 2: Montante, Parceiro, Modalidade */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>Montante (ME)</label>
+                <input type="number" step="0.01" {...register('montante', { required: true })} className={inputClass} />
+              </div>
+
+              <div>
+                <label className={labelClass}>Parceiro</label>
+                <select {...register('parceiro_id', { required: true })} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  {parceiros?.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelClass}>Modalidade</label>
+                <input type="text" {...register('modalidade', { required: true })} placeholder="Ex: Disponibilidade" className={inputClass} />
+              </div>
+            </div>
+
+            {/* Linha 3: Caminho, Spot, Taxa Cliente */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>Caminho</label>
+                <select {...register('caminho', { required: true })} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  <option value="SAIDA">Saída (Envio)</option>
+                  <option value="ENTRADA">Entrada (Recebimento)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={labelClass}>Spot</label>
+                <input type="number" step="0.000001" {...register('spot', { required: true })} className={inputClass} />
+              </div>
+
+              <div>
+                <label className={labelClass}>Taxa Cliente</label>
+                <input type="number" step="0.000001" {...register('taxa_cliente', { required: true })} className={inputClass} />
+              </div>
+            </div>
+
+            {/* Linha 4: PTAX, Isenções */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>
+                  PTAX D-1
+                  {moedaObj?.requer_ptax === false && (
+                    <span className="text-xs text-gray-400 ml-1">(N/A para USD)</span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  step="0.000001"
+                  {...register('ptax')}
+                  disabled={moedaObj?.requer_ptax === false}
+                  className={`${inputClass} ${moedaObj?.requer_ptax === false ? 'opacity-50' : ''}`}
+                />
+              </div>
+
+              <div className="flex items-end gap-6">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" {...register('isencao_iof')} className="rounded" />
+                  Isento de IOF
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" {...register('isencao_tarifa')} className="rounded" />
+                  Isento de Tarifa
+                </label>
+              </div>
+
+              <div>
+                <label className={labelClass}>Indicação (Finder)</label>
+                <input type="text" {...register('indicacao')} className={inputClass} />
+              </div>
+            </div>
+
+            {/* Linha 5: Tarifa Negociada */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>Tarifa Negociada (opcional)</label>
+                <input type="number" step="0.01" {...register('tarifa_negociada')} className={inputClass} />
+              </div>
+
+              <div>
+                <label className={labelClass}>Moeda da Tarifa Negociada</label>
+                <select {...register('moeda_tarifa_negociada')} className={inputClass}>
+                  <option value="">N/A</option>
+                  <option value="BRL">BRL</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+            </div>
+
+            {erro && (
+              <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>
             )}
-            {clientesResultado.length > 0 && !clienteSelecionado && (
-              <ul className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-auto">
-                {clientesResultado.map((c) => (
-                  <li
-                    key={c.id}
-                    onClick={() => {
-                      setClienteSelecionado(c)
-                      setClienteBusca(c.nome)
-                      setClientesResultado([])
-                    }}
-                    className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    {c.cpf_cnpj} - {c.nome}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
 
-          <div>
-            <label className={labelClass}>Moeda</label>
-            <select {...register('moeda_id', { required: true })} className={inputClass}>
-              <option value="">Selecione...</option>
-              {moedas?.map((m) => (
-                <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
-              ))}
-            </select>
-          </div>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={criarOperacao.isPending}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {criarOperacao.isPending ? 'Salvando...' : 'Salvar Rascunho'}
+              </button>
+            </div>
+          </form>
         </div>
 
-        {/* Linha 2: Montante, Parceiro, Modalidade */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>Montante (ME)</label>
-            <input type="number" step="0.01" {...register('montante', { required: true })} className={inputClass} />
-          </div>
-
-          <div>
-            <label className={labelClass}>Parceiro</label>
-            <select {...register('parceiro_id', { required: true })} className={inputClass}>
-              <option value="">Selecione...</option>
-              {parceiros?.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClass}>Modalidade</label>
-            <input type="text" {...register('modalidade', { required: true })} placeholder="Ex: Disponibilidade" className={inputClass} />
-          </div>
+        {/* Preview (1 coluna) */}
+        <div>
+          <PreviewCalculo data={simulacao} isLoading={simulacaoLoading} />
         </div>
-
-        {/* Linha 3: Caminho, Spot, Taxa Cliente */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>Caminho</label>
-            <select {...register('caminho', { required: true })} className={inputClass}>
-              <option value="">Selecione...</option>
-              <option value="SAIDA">Saída (Envio)</option>
-              <option value="ENTRADA">Entrada (Recebimento)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClass}>Spot</label>
-            <input type="number" step="0.000001" {...register('spot', { required: true })} className={inputClass} />
-          </div>
-
-          <div>
-            <label className={labelClass}>Taxa Cliente</label>
-            <input type="number" step="0.000001" {...register('taxa_cliente', { required: true })} className={inputClass} />
-          </div>
-        </div>
-
-        {/* Linha 4: PTAX, Isenções */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>
-              PTAX D-1
-              {moedaObj?.requer_ptax === false && (
-                <span className="text-xs text-gray-400 ml-1">(N/A para USD)</span>
-              )}
-            </label>
-            <input
-              type="number"
-              step="0.000001"
-              {...register('ptax')}
-              disabled={moedaObj?.requer_ptax === false}
-              className={`${inputClass} ${moedaObj?.requer_ptax === false ? 'opacity-50' : ''}`}
-            />
-          </div>
-
-          <div className="flex items-end gap-6">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <input type="checkbox" {...register('isencao_iof')} className="rounded" />
-              Isento de IOF
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <input type="checkbox" {...register('isencao_tarifa')} className="rounded" />
-              Isento de Tarifa
-            </label>
-          </div>
-
-          <div>
-            <label className={labelClass}>Indicação (Finder)</label>
-            <input type="text" {...register('indicacao')} className={inputClass} />
-          </div>
-        </div>
-
-        {/* Linha 5: Tarifa Negociada */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>Tarifa Negociada (opcional)</label>
-            <input type="number" step="0.01" {...register('tarifa_negociada')} className={inputClass} />
-          </div>
-
-          <div>
-            <label className={labelClass}>Moeda da Tarifa Negociada</label>
-            <select {...register('moeda_tarifa_negociada')} className={inputClass}>
-              <option value="">N/A</option>
-              <option value="BRL">BRL</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
-        </div>
-
-        {erro && (
-          <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>
-        )}
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={criarOperacao.isPending}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {criarOperacao.isPending ? 'Salvando...' : 'Salvar Rascunho'}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   )
 }

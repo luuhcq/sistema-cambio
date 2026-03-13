@@ -7,8 +7,55 @@ from operacoes.models import Operacao, Cliente, Moeda, Parceiro, LogExclusaoBole
 from operacoes.schemas import OperacaoIn, OperacaoOut, CancelarIn, ExcluirIn
 from operacoes.hmac_utils import gerar_hmac
 from decimal import Decimal
+from operacoes.schemas import (
+    OperacaoIn,
+    OperacaoOut,
+    CancelarIn,
+    ExcluirIn,
+    SimulacaoIn,
+    SimulacaoOut,
+)
 
 router = Router(tags=["Operações"], auth=JWTAuth())
+
+
+@router.post("/simular", response={200: dict, 400: dict})
+def simular_operacao(request, payload: SimulacaoIn):
+    try:
+        cliente = get_object_or_404(Cliente, id=payload.cliente_id)
+        moeda = get_object_or_404(Moeda, id=payload.moeda_id)
+        parceiro = get_object_or_404(Parceiro, id=payload.parceiro_id)
+
+        op = Operacao(
+            cliente=cliente,
+            moeda=moeda,
+            montante=payload.montante,
+            parceiro=parceiro,
+            modalidade=payload.modalidade,
+            caminho=payload.caminho,
+            isencao_iof=payload.isencao_iof,
+            isencao_tarifa=payload.isencao_tarifa,
+            tarifa_negociada=payload.tarifa_negociada,
+            moeda_tarifa_negociada=payload.moeda_tarifa_negociada,
+            ptax=payload.ptax,
+            spot=payload.spot,
+            taxa_cliente=payload.taxa_cliente,
+        )
+
+        return 200, {
+            "aliquota_iof": str(op.aliquota_iof),
+            "iof_nominal": str(op.iof_nominal),
+            "tarifa_nominal": str(op.tarifa_nominal),
+            "valor_base_brl": str(op.valor_base_brl),
+            "vet": str(op.vet),
+            "spread": str(op.spread),
+            "spread_com_sinal": str(op.spread_com_sinal),
+            "comissao_bruta": str(op.comissao_bruta),
+            "comissao_liquida": str(op.comissao_liquida),
+            "spread_negativo": op.spread_negativo,
+        }
+    except Exception as e:
+        return 400, {"detail": str(e)}
 
 
 @router.get("/", response=list[OperacaoOut])
@@ -115,6 +162,13 @@ def submeter_operacao(request, operacao_id: int):
 
     operacao.status = "PENDENTE"
     operacao.save()
+
+    spread_info = {}
+    if operacao.spread_negativo:
+        spread_info = {
+            "aviso": "Spread negativo detectado. Boleta requer aprovação do Gestor."
+        }
+
     return 200, operacao
 
 

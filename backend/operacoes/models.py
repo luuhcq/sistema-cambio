@@ -402,6 +402,21 @@ class Operacao(models.Model):
         return valor.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
 
     @property
+    def spread_com_sinal(self):
+        """Spread com sinal: negativo quando a mesa perde dinheiro."""
+        from decimal import Decimal, ROUND_HALF_UP
+
+        if not self.spot or self.spot == Decimal("0"):
+            return Decimal("0")
+
+        valor = ((self.taxa_cliente - self.spot) / self.spot) * Decimal("100")
+
+        if self.caminho == "ENTRADA":
+            valor = -valor
+
+        return valor.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+
+    @property
     def comissao_bruta(self):
         """Spot × Spread(decimal) × Montante × Fator do Parceiro."""
         from decimal import Decimal, ROUND_HALF_UP
@@ -421,6 +436,19 @@ class Operacao(models.Model):
 
         valor = self.comissao_bruta * Decimal("0.95")
         return valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    @property
+    def spread_negativo(self):
+        """Spread é negativo quando a mesa perde dinheiro."""
+        from decimal import Decimal
+
+        if not self.spot or self.spot == Decimal("0"):
+            return False
+
+        if self.caminho == "SAIDA":
+            return self.taxa_cliente < self.spot
+        else:  # ENTRADA
+            return self.taxa_cliente > self.spot
 
 
 class LogExclusaoBoleta(models.Model):
