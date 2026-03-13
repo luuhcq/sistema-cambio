@@ -1,0 +1,145 @@
+from ninja import Router
+from django.db.models import Sum, Avg, Count, F, DecimalField
+from django.db.models.functions import Coalesce
+from decimal import Decimal
+from datetime import date, timedelta
+from operacoes.models import Operacao
+from operacoes.auth import JWTAuth
+
+router = Router(tags=["Dashboard"], auth=JWTAuth())
+
+
+def calcular_indicadores(operacoes):
+    """Calcula indicadores a partir de um queryset de operações confirmadas."""
+    if not operacoes.exists():
+        return {
+            "volume_operado": Decimal("0"),
+            "receita_bruta": Decimal("0"),
+            "receita_liquida": Decimal("0"),
+            "total_boletas": 0,
+            "ticket_medio": Decimal("0"),
+            "receita_media_por_operacao": Decimal("0"),
+            "spread_medio": Decimal("0"),
+            "por_parceiro": [],
+            "por_moeda": [],
+            "por_modalidade": [],
+            "top_clientes": [],
+        }
+
+    lista = list(operacoes.select_related("cliente", "moeda", "parceiro"))
+
+    volume = sum(op.vet for op in lista)
+    receita_bruta = sum(op.comissao_bruta for op in lista)
+    receita_liquida = sum(op.comissao_liquida for op in lista)
+    total = len(lista)
+    ticket_medio = volume / total if total else Decimal("0")
+    receita_media = receita_liquida / total if total else Decimal("0")
+
+    # Spread médio ponderado pelo volume
+    soma_spread_volume = sum(op.spread * op.vet for op in lista)
+    spread_medio = soma_spread_volume / volume if volume else Decimal("0")
+
+    # Por parceiro
+    parceiros = {}
+    for op in lista:
+        nome = op.parceiro.nome
+        if nome not in parceiros:
+            parceiros[nome] = Decimal("0")
+        parceiros[nome] += op.comissao_liquida
+    por_parceiro = sorted(
+        [{"parceiro": k, "receita": v} for k, v in parceiros.items()],
+        key=lambda x: x["receita"],
+        reverse=True,
+    )
+
+    # Por moeda
+    moedas = {}
+    for op in lista:
+        codigo = op.moeda.codigo_iso
+        if codigo not in moedas:
+            moedas[codigo] = {"volume": Decimal("0"), "count": 0}
+        moedas[codigo]["volume"] += op.vet
+        moedas[codigo]["count"] += 1
+    por_moeda = sorted(
+        [
+            {"moeda": k, "volume": v["volume"], "operacoes": v["count"]}
+            for k, v in moedas.items()
+        ],
+        key=lambda x: x["volume"],
+        reverse=True,
+    )
+
+    # Por modalidade
+    modalidades = {}
+    for op in lista:
+        mod = op.modalidade
+        if mod not in modalidades:
+            modalidades[mod] = {"volume": Decimal("0"), "count": 0}
+        modalidades[mod]["volume"] += op.vet
+        modalidades[mod]["count"] += 1
+    por_modalidade = sorted(
+        [
+            {"modalidade": k, "volume": v["volume"], "operacoes": v["count"]}
+            for k, v in modalidades.items()
+        ],
+        key=lambda x: x["volume"],
+        reverse=True,
+    )
+
+    # Top clientes
+    clientes = {}
+    for op in lista:
+        nome = op.cliente.nome
+        if nome not in clientes:
+            clientes[nome] = {"volume": Decimal("0"), "receita": Decimal("0")}
+        clientes[nome]["volume"] += op.vet
+        clientes[nome]["receita"] += op.comissao_liquida
+    top_clientes = sorted(
+        [
+            {"cliente": k, "volume": v["volume"], "receita": v["receita"]}
+            for k, v in clientes.items()
+        ],
+        key=lambda x: x["volume"],
+        reverse=True,
+    )[:10]
+
+    return {
+        "volume_operado": volume,
+        "receita_bruta": receita_bruta,
+        "receita_liquida": receita_liquida,
+        "total_boletas": total,
+        "ticket_medio": ticket_medio,
+        "receita_media_por_operacao": receita_media,
+        "spread_medio": spread_medio,
+        "por_parceiro": por_parceiro,
+        "por_moeda": por_moeda,
+        "por_modalidade": por_modalidade,
+        "top_clientes": top_clientes,
+    }
+
+
+@router.get("/indicadores", response=dict)
+def indicadores(request, periodo: str = "mensal"):
+    hoje = date.today()
+
+    if periodo == "diario":
+        inicio = hoje
+    elif periodo == "semanal":
+        inicio = hoje - timedelta(days=hoje.weekday())
+    elif periodo == "mensal":
+        inicio = hoje.replace(day=1)
+    elif periodo == "trimestral":
+        mes_inicio = ((hoje.month - 1) // 3) * 3 + 1
+        inicio = hoje.replace(month=mes_inicio, day=1)
+    elif periodo == "ytd":
+        inicio = hoje.replace(month=1, day=1)
+    else:
+        inicio = hoje.replace(day=1)
+
+    operacoes = Operacao.objects.filter(
+        status="CONFIRMADA",
+        data__gte=inicio,
+        data__lte=hoje,
+    )
+
+    return calcular_indicadores(operacoes)

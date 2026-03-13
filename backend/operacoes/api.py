@@ -6,6 +6,7 @@ from operacoes.routers.cadastros import router as cadastros_router
 from operacoes.routers.operacoes import router as operacoes_router
 from operacoes.routers.ptax import router as ptax_router
 from operacoes.routers.configuracoes import router as config_router
+from operacoes.routers.dashboard import router as dashboard_router
 
 api = NinjaAPI(
     title="Sistema de Câmbio",
@@ -18,6 +19,7 @@ api.add_router("/cadastros", cadastros_router)
 api.add_router("/operacoes", operacoes_router)
 api.add_router("/ptax", ptax_router)
 api.add_router("/configuracoes", config_router)
+api.add_router("/dashboard", dashboard_router)
 
 
 @api.get("/me", response=UserOut, auth=JWTAuth())
