@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import NovaBoleta from './NovaBoleta'
 import ModalJustificativa from '../../components/ModalJustificativa'
+import DetalheBoleta from './DetalheBoleta'
 
 const STATUS_CORES = {
   RASCUNHO: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -22,6 +23,7 @@ export default function BoletasPage() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [modalCancelar, setModalCancelar] = useState(null)
   const [modalExcluir, setModalExcluir] = useState(null)
+  const [detalhe, setDetalhe] = useState(null)       // LINHA NOVA
   const [erro, setErro] = useState('')
 
   const { data: operacoes, isLoading } = useOperacoes()
@@ -121,7 +123,11 @@ export default function BoletasPage() {
               </tr>
             )}
             {operacoes?.map((op) => (
-              <tr key={op.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <tr
+                key={op.id}
+                onClick={() => setDetalhe(op)}                                    // LINHA ALTERADA
+                className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"  // ADICIONADO cursor-pointer
+              >
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{op.id}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.data}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.cliente.nome}</td>
@@ -139,7 +145,7 @@ export default function BoletasPage() {
                     {op.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>   {/* ADICIONADO stopPropagation */}
                   <div className="flex items-center justify-center gap-1">
                     {op.status === 'RASCUNHO' && (
                       <button
@@ -195,6 +201,11 @@ export default function BoletasPage() {
           onConfirmar={handleExcluir}
           onCancelar={() => setModalExcluir(null)}
         />
+      )}
+
+      {/* BLOCO NOVO */}
+      {detalhe && (
+        <DetalheBoleta operacao={detalhe} onFechar={() => setDetalhe(null)} />
       )}
     </div>
   )
