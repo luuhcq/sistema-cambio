@@ -147,3 +147,26 @@ class CancelarIn(Schema):
 
 class ExcluirIn(Schema):
     justificativa: str
+
+
+# --- Configurações ---
+class TarifaConfigOut(Schema):
+    id: int
+    parceiro: ParceiroOut
+    tipo_pessoa: str
+    caminho: str
+    valor: Decimal
+    moeda_tarifa: str
+
+
+class ComissaoConfigOut(Schema):
+    id: int
+    parceiro: ParceiroOut
+    fator: Decimal
+
+
+class IOFConfigOut(Schema):
+    id: int
+    modalidade: str
+    caminho: str
+    aliquota: Decimal
