@@ -1,0 +1,149 @@
+from ninja import Schema
+from datetime import date
+from decimal import Decimal
+
+
+# --- Auth ---
+class LoginIn(Schema):
+    username: str
+    password: str
+
+
+class TokenOut(Schema):
+    access: str
+    refresh: str
+
+
+class UserOut(Schema):
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    email: str
+    is_staff: bool
+
+
+# --- Moeda ---
+class MoedaOut(Schema):
+    id: int
+    codigo_iso: str
+    nome: str
+    requer_ptax: bool
+
+
+# --- Parceiro ---
+class ParceiroOut(Schema):
+    id: int
+    nome: str
+
+
+# --- Cliente ---
+class ClienteOut(Schema):
+    id: int
+    cpf_cnpj: str
+    nome: str
+    tipo: str
+
+
+class ClienteIn(Schema):
+    cpf_cnpj: str
+    nome: str
+
+
+# --- Operação ---
+class OperacaoIn(Schema):
+    data: date
+    cliente_id: int
+    moeda_id: int
+    montante: Decimal
+    parceiro_id: int
+    modalidade: str
+    caminho: str
+    isencao_iof: bool = False
+    isencao_tarifa: bool = False
+    tarifa_negociada: Decimal | None = None
+    moeda_tarifa_negociada: str | None = None
+    ptax: Decimal | None = None
+    spot: Decimal
+    taxa_cliente: Decimal
+    indicacao: str | None = None
+
+
+class OperacaoOut(Schema):
+    id: int
+    data: date
+    cliente: ClienteOut
+    moeda: MoedaOut
+    montante: Decimal
+    parceiro: ParceiroOut
+    modalidade: str
+    caminho: str
+    isencao_iof: bool
+    isencao_tarifa: bool
+    tarifa_negociada: Decimal | None
+    moeda_tarifa_negociada: str | None
+    ptax: Decimal | None
+    spot: Decimal
+    taxa_cliente: Decimal
+    indicacao: str | None
+    status: str
+    hash_integridade: str
+
+    # Campos calculados
+    aliquota_iof: Decimal
+    iof_nominal: Decimal
+    tarifa_nominal: Decimal
+    valor_base_brl: Decimal
+    vet: Decimal
+    spread: Decimal
+    comissao_bruta: Decimal
+    comissao_liquida: Decimal
+
+    @staticmethod
+    def resolve_aliquota_iof(obj):
+        return obj.aliquota_iof
+
+    @staticmethod
+    def resolve_iof_nominal(obj):
+        return obj.iof_nominal
+
+    @staticmethod
+    def resolve_tarifa_nominal(obj):
+        return obj.tarifa_nominal
+
+    @staticmethod
+    def resolve_valor_base_brl(obj):
+        return obj.valor_base_brl
+
+    @staticmethod
+    def resolve_vet(obj):
+        return obj.vet
+
+    @staticmethod
+    def resolve_spread(obj):
+        return obj.spread
+
+    @staticmethod
+    def resolve_comissao_bruta(obj):
+        return obj.comissao_bruta
+
+    @staticmethod
+    def resolve_comissao_liquida(obj):
+        return obj.comissao_liquida
+
+
+# --- Transições de Status ---
+class SubmeterIn(Schema):
+    pass
+
+
+class AprovarIn(Schema):
+    pass
+
+
+class CancelarIn(Schema):
+    justificativa: str
+
+
+class ExcluirIn(Schema):
+    justificativa: str
