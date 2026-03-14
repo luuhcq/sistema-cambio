@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useCriarSolicitacao } from '../../hooks/useSolicitacoes'
+import api from '../../api/axios'
 
 function formatBRL(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -38,6 +39,8 @@ export default function DetalheBoleta({ operacao, onFechar }) {
   const [justificativa, setJustificativa] = useState('')
   const [erroSolicitacao, setErroSolicitacao] = useState('')
   const [sucessoSolicitacao, setSucessoSolicitacao] = useState('')
+  const [integridade, setIntegridade] = useState(null)
+  const [verificando, setVerificando] = useState(false)
 
   const spreadNegativo = op.caminho === 'SAIDA'
     ? Number(op.taxa_cliente) < Number(op.spot)
@@ -61,6 +64,18 @@ export default function DetalheBoleta({ operacao, onFechar }) {
       setJustificativa('')
     } catch (e) {
       setErroSolicitacao(e.response?.data?.detail || 'Erro ao solicitar edição.')
+    }
+  }
+
+  const verificarIntegridade = async () => {
+    setVerificando(true)
+    try {
+      const res = await api.get(`/operacoes/${op.id}/verificar-integridade`)
+      setIntegridade(res.data)
+    } catch {
+      setIntegridade({ status: 'erro', mensagem: 'Erro ao verificar integridade.' })
+    } finally {
+      setVerificando(false)
     }
   }
 
@@ -224,9 +239,27 @@ export default function DetalheBoleta({ operacao, onFechar }) {
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
                 Integridade
               </h3>
-              <p className="text-xs font-mono text-gray-400 break-all">
+              <p className="text-xs font-mono text-gray-400 break-all mb-3">
                 HMAC: {op.hash_integridade}
               </p>
+              <button
+                onClick={verificarIntegridade}
+                disabled={verificando}
+                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50"
+              >
+                {verificando ? 'Verificando...' : 'Verificar Integridade'}
+              </button>
+              {integridade && (
+                <div className={`mt-2 px-3 py-2 rounded-lg text-sm ${
+                  integridade.status === 'integro'
+                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+                    : integridade.status === 'adulterado'
+                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+                    : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                }`}>
+                  {integridade.mensagem}
+                </div>
+              )}
             </div>
           )}
         </div>

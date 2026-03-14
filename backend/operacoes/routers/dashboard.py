@@ -119,27 +119,38 @@ def calcular_indicadores(operacoes):
 
 
 @router.get("/indicadores", response=dict)
-def indicadores(request, periodo: str = "mensal"):
+def indicadores(
+    request, periodo: str = "mensal", data_inicio: str = None, data_fim: str = None
+):
     hoje = date.today()
 
-    if periodo == "diario":
+    if periodo == "custom" and data_inicio and data_fim:
+        inicio = date.fromisoformat(data_inicio)
+        fim = date.fromisoformat(data_fim)
+    elif periodo == "diario":
         inicio = hoje
+        fim = hoje
     elif periodo == "semanal":
         inicio = hoje - timedelta(days=hoje.weekday())
+        fim = hoje
     elif periodo == "mensal":
         inicio = hoje.replace(day=1)
+        fim = hoje
     elif periodo == "trimestral":
         mes_inicio = ((hoje.month - 1) // 3) * 3 + 1
         inicio = hoje.replace(month=mes_inicio, day=1)
+        fim = hoje
     elif periodo == "ytd":
         inicio = hoje.replace(month=1, day=1)
+        fim = hoje
     else:
         inicio = hoje.replace(day=1)
+        fim = hoje
 
     operacoes = Operacao.objects.filter(
         status="CONFIRMADA",
         data__gte=inicio,
-        data__lte=hoje,
+        data__lte=fim,
     )
 
     return calcular_indicadores(operacoes)

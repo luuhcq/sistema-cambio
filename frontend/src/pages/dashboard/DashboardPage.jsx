@@ -29,7 +29,9 @@ function Card({ titulo, valor, subtitulo }) {
 
 export default function DashboardPage() {
   const [periodo, setPeriodo] = useState('mensal')
-  const { data, isLoading } = useDashboard(periodo)
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
+  const { data, isLoading } = useDashboard(periodo, dataInicio, dataFim)
 
   const baixarRelatorio = async (formato, tipo) => {
     try {
@@ -115,7 +117,35 @@ export default function DashboardPage() {
                 {p.label}
               </button>
             ))}
+            <button
+              onClick={() => setPeriodo('custom')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                periodo === 'custom'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+            >
+              Customizado
+            </button>
           </div>
+
+          {periodo === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              />
+              <span className="text-gray-400 text-sm">a</span>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
 

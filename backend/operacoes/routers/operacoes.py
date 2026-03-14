@@ -20,7 +20,7 @@ from operacoes.schemas import (
     SimulacaoIn,
 )
 from operacoes.auth import JWTAuth
-from operacoes.hmac_utils import gerar_hmac
+from operacoes.hmac_utils import gerar_hmac, verificar_hmac
 from operacoes.permissions import (
     pode_criar_boleta,
     pode_editar_boleta,
@@ -368,3 +368,28 @@ def excluir_operacao(request, operacao_id: int, payload: ExcluirIn):
 
     operacao.delete()
     return 200, {"detail": "Operação excluída. Log registrado permanentemente."}
+
+
+@router.get("/{operacao_id}/verificar-integridade", response={200: dict, 404: dict})
+def verificar_integridade(request, operacao_id: int):
+    operacao = Operacao.objects.select_related("moeda").filter(id=operacao_id).first()
+    if not operacao:
+        return 404, {"detail": "Operação não encontrada."}
+
+    if not operacao.hash_integridade:
+        return 200, {
+            "status": "sem_hash",
+            "mensagem": "Boleta ainda não foi confirmada.",
+        }
+
+    integro = verificar_hmac(operacao)
+    return 200, {
+        "status": "integro" if integro else "adulterado",
+        "mensagem": (
+            "Hash válido. Nenhuma adulteração detectada."
+            if integro
+            else "⚠ ALERTA: Hash não confere. Possível adulteração dos dados."
+        ),
+        "hash_armazenado": operacao.hash_integridade,
+        "hash_recalculado": gerar_hmac(operacao),
+    }
