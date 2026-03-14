@@ -52,3 +52,11 @@ export function useExcluirOperacao() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operacoes'] }),
   })
 }
+
+export function useEditarOperacao() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }) => api.put(`/operacoes/${id}`, data).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operacoes'] }),
+  })
+}

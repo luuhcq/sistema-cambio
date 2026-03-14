@@ -3,22 +3,47 @@ import { useForm } from 'react-hook-form'
 import { useMoedas } from '../../hooks/useMoedas'
 import { useParceiros } from '../../hooks/useParceiros'
 import { usePtax } from '../../hooks/usePtax'
-import { useCriarOperacao } from '../../hooks/useOperacoes'
+import { useCriarOperacao, useEditarOperacao } from '../../hooks/useOperacoes'
 import { useSimulacao } from '../../hooks/useSimulacao'
 import PreviewCalculo from './PreviewCalculo'
 import api from '../../api/axios'
 
-export default function NovaBoleta({ onSuccess }) {
-  const { register, handleSubmit, watch, setValue } = useForm()
+export default function NovaBoleta({ onSuccess, operacaoEditando }) {
+  const isEdicao = !!operacaoEditando
+  const { register, handleSubmit, watch, setValue, reset } = useForm()
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
   const { data: ptaxData } = usePtax()
   const criarOperacao = useCriarOperacao()
+  const editarOperacao = useEditarOperacao()
 
   const [clienteBusca, setClienteBusca] = useState('')
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
   const [clientesResultado, setClientesResultado] = useState([])
   const [erro, setErro] = useState('')
+
+  // Preenche o form quando editar
+  useEffect(() => {
+    if (operacaoEditando) {
+      const op = operacaoEditando
+      setValue('data', op.data)
+      setValue('moeda_id', String(op.moeda.id))
+      setValue('montante', op.montante)
+      setValue('parceiro_id', String(op.parceiro.id))
+      setValue('modalidade', op.modalidade)
+      setValue('caminho', op.caminho)
+      setValue('spot', op.spot)
+      setValue('taxa_cliente', op.taxa_cliente)
+      setValue('ptax', op.ptax || '')
+      setValue('isencao_iof', op.isencao_iof)
+      setValue('isencao_tarifa', op.isencao_tarifa)
+      setValue('tarifa_negociada', op.tarifa_negociada || '')
+      setValue('moeda_tarifa_negociada', op.moeda_tarifa_negociada || '')
+      setValue('indicacao', op.indicacao || '')
+      setClienteSelecionado(op.cliente)
+      setClienteBusca(op.cliente.nome)
+    }
+  }, [operacaoEditando, setValue])
 
   const watchAll = watch()
   const moedaSelecionada = watch('moeda_id')
@@ -26,25 +51,25 @@ export default function NovaBoleta({ onSuccess }) {
 
   // Auto-preenche PTAX quando moeda requer
   useEffect(() => {
-    if (moedaObj?.requer_ptax && ptaxData?.ptax) {
+    if (moedaObj?.requer_ptax && ptaxData?.ptax && !isEdicao) {
       setValue('ptax', ptaxData.ptax)
     } else if (moedaObj && !moedaObj.requer_ptax) {
       setValue('ptax', '')
     }
-  }, [moedaObj, ptaxData, setValue])
+  }, [moedaObj, ptaxData, setValue, isEdicao])
 
   // Busca clientes
   useEffect(() => {
-    if (clienteBusca.length >= 3) {
+    if (clienteBusca.length >= 3 && !clienteSelecionado) {
       api.get('/cadastros/clientes', { params: { q: clienteBusca } })
         .then((r) => setClientesResultado(r.data))
         .catch(() => setClientesResultado([]))
     } else {
       setClientesResultado([])
     }
-  }, [clienteBusca])
+  }, [clienteBusca, clienteSelecionado])
 
-  // Payload de simulação com debounce implícito via React Query
+  // Payload de simulação
   const simulacaoPayload = useMemo(() => {
     if (!clienteSelecionado) return null
     if (!watchAll.moeda_id || !watchAll.parceiro_id) return null
@@ -93,12 +118,18 @@ export default function NovaBoleta({ onSuccess }) {
     }
 
     try {
-      await criarOperacao.mutateAsync(payload)
+      if (isEdicao) {
+        await editarOperacao.mutateAsync({ id: operacaoEditando.id, data: payload })
+      } else {
+        await criarOperacao.mutateAsync(payload)
+      }
       onSuccess()
     } catch (e) {
-      setErro(e.response?.data?.detail || 'Erro ao criar boleta.')
+      setErro(e.response?.data?.detail || `Erro ao ${isEdicao ? 'editar' : 'criar'} boleta.`)
     }
   }
+
+  const salvando = criarOperacao.isPending || editarOperacao.isPending
 
   const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
   const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
@@ -106,7 +137,7 @@ export default function NovaBoleta({ onSuccess }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-6">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Nova Boleta
+        {isEdicao ? `Editar Boleta #${operacaoEditando.id}` : 'Nova Boleta'}
       </h2>
 
       <div className="grid grid-cols-3 gap-6">
@@ -271,10 +302,10 @@ export default function NovaBoleta({ onSuccess }) {
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={criarOperacao.isPending}
+                disabled={salvando}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {criarOperacao.isPending ? 'Salvando...' : 'Salvar Rascunho'}
+                {salvando ? 'Salvando...' : isEdicao ? 'Salvar Alterações' : 'Salvar Rascunho'}
               </button>
             </div>
           </form>

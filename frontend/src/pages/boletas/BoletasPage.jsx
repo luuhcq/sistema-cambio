@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   useOperacoes,
   useSubmeterOperacao,
@@ -18,19 +18,74 @@ const STATUS_CORES = {
   CANCELADA: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
+const STATUS_OPTIONS = ['TODOS', 'RASCUNHO', 'PENDENTE', 'CONFIRMADA', 'CANCELADA']
+
 export default function BoletasPage() {
   const { user } = useAuth()
   const [mostrarForm, setMostrarForm] = useState(false)
+  const [editando, setEditando] = useState(null)
   const [modalCancelar, setModalCancelar] = useState(null)
   const [modalExcluir, setModalExcluir] = useState(null)
-  const [detalhe, setDetalhe] = useState(null)       // LINHA NOVA
+  const [detalhe, setDetalhe] = useState(null)
   const [erro, setErro] = useState('')
+
+  // Filtros
+  const [filtroStatus, setFiltroStatus] = useState('TODOS')
+  const [filtroParceiro, setFiltroParceiro] = useState('')
+  const [filtroMoeda, setFiltroMoeda] = useState('')
+  const [filtroDataInicio, setFiltroDataInicio] = useState('')
+  const [filtroDataFim, setFiltroDataFim] = useState('')
+  const [busca, setBusca] = useState('')
 
   const { data: operacoes, isLoading } = useOperacoes()
   const submeter = useSubmeterOperacao()
   const aprovar = useAprovarOperacao()
   const cancelar = useCancelarOperacao()
   const excluir = useExcluirOperacao()
+
+  const parceirosUnicos = useMemo(() => {
+    if (!operacoes) return []
+    const set = new Set(operacoes.map((op) => op.parceiro.nome))
+    return [...set].sort()
+  }, [operacoes])
+
+  const moedasUnicas = useMemo(() => {
+    if (!operacoes) return []
+    const set = new Set(operacoes.map((op) => op.moeda.codigo_iso))
+    return [...set].sort()
+  }, [operacoes])
+
+  const operacoesFiltradas = useMemo(() => {
+    if (!operacoes) return []
+
+    return operacoes.filter((op) => {
+      if (filtroStatus !== 'TODOS' && op.status !== filtroStatus) return false
+      if (filtroParceiro && op.parceiro.nome !== filtroParceiro) return false
+      if (filtroMoeda && op.moeda.codigo_iso !== filtroMoeda) return false
+      if (filtroDataInicio && op.data < filtroDataInicio) return false
+      if (filtroDataFim && op.data > filtroDataFim) return false
+      if (busca) {
+        const termo = busca.toLowerCase()
+        const match =
+          op.cliente.nome.toLowerCase().includes(termo) ||
+          op.cliente.cpf_cnpj.includes(busca.replace(/\D/g, '')) ||
+          String(op.id).includes(busca)
+        if (!match) return false
+      }
+      return true
+    })
+  }, [operacoes, filtroStatus, filtroParceiro, filtroMoeda, filtroDataInicio, filtroDataFim, busca])
+
+  const limparFiltros = () => {
+    setFiltroStatus('TODOS')
+    setFiltroParceiro('')
+    setFiltroMoeda('')
+    setFiltroDataInicio('')
+    setFiltroDataFim('')
+    setBusca('')
+  }
+
+  const temFiltroAtivo = filtroStatus !== 'TODOS' || filtroParceiro || filtroMoeda || filtroDataInicio || filtroDataFim || busca
 
   const handleSubmeter = async (id) => {
     try {
@@ -72,6 +127,8 @@ export default function BoletasPage() {
 
   const isGestor = user?.is_staff
 
+  const selectClass = 'px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
   if (isLoading) {
     return <p className="text-gray-500">Carregando...</p>
   }
@@ -81,7 +138,10 @@ export default function BoletasPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Boletas</h1>
         <button
-          onClick={() => setMostrarForm(!mostrarForm)}
+          onClick={() => {
+            setMostrarForm(!mostrarForm)
+            if (mostrarForm) setEditando(null)
+          }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
           {mostrarForm ? 'Fechar' : 'Nova Boleta'}
@@ -94,10 +154,91 @@ export default function BoletasPage() {
 
       {mostrarForm && (
         <div className="mb-8">
-          <NovaBoleta onSuccess={() => setMostrarForm(false)} />
+          <NovaBoleta
+            onSuccess={() => {
+              setMostrarForm(false)
+              setEditando(null)
+            }}
+            operacaoEditando={editando}
+          />
         </div>
       )}
 
+      {/* Barra de Filtros */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-4 mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-1">
+            {STATUS_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setFiltroStatus(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  filtroStatus === s
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                }`}
+              >
+                {s === 'TODOS' ? 'Todos' : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-6 bg-gray-200 dark:bg-gray-700" />
+
+          <select value={filtroParceiro} onChange={(e) => setFiltroParceiro(e.target.value)} className={selectClass}>
+            <option value="">Parceiro</option>
+            {parceirosUnicos.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          <select value={filtroMoeda} onChange={(e) => setFiltroMoeda(e.target.value)} className={selectClass}>
+            <option value="">Moeda</option>
+            {moedasUnicas.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={filtroDataInicio}
+            onChange={(e) => setFiltroDataInicio(e.target.value)}
+            className={selectClass}
+          />
+          <span className="text-gray-400 text-sm">a</span>
+          <input
+            type="date"
+            value={filtroDataFim}
+            onChange={(e) => setFiltroDataFim(e.target.value)}
+            className={selectClass}
+          />
+
+          <div className="w-px h-6 bg-gray-200 dark:bg-gray-700" />
+
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar cliente ou # boleta..."
+            className="w-56 px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+
+          {temFiltroAtivo && (
+            <button
+              onClick={limparFiltros}
+              className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              Limpar filtros
+            </button>
+          )}
+
+          <span className="ml-auto text-xs text-gray-400">
+            {operacoesFiltradas.length} de {operacoes?.length || 0} boletas
+          </span>
+        </div>
+      </div>
+
+      {/* Tabela */}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">
@@ -115,18 +256,18 @@ export default function BoletasPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {operacoes?.length === 0 && (
+            {operacoesFiltradas.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
-                  Nenhuma boleta registrada.
+                  {temFiltroAtivo ? 'Nenhuma boleta encontrada com os filtros aplicados.' : 'Nenhuma boleta registrada.'}
                 </td>
               </tr>
             )}
-            {operacoes?.map((op) => (
+            {operacoesFiltradas.map((op) => (
               <tr
                 key={op.id}
-                onClick={() => setDetalhe(op)}                                    // LINHA ALTERADA
-                className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"  // ADICIONADO cursor-pointer
+                onClick={() => setDetalhe(op)}
+                className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
               >
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{op.id}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.data}</td>
@@ -145,8 +286,19 @@ export default function BoletasPage() {
                     {op.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>   {/* ADICIONADO stopPropagation */}
+                <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-center gap-1">
+                    {op.status === 'RASCUNHO' && (
+                      <button
+                        onClick={() => {
+                          setEditando(op)
+                          setMostrarForm(true)
+                        }}
+                        className="px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
+                      >
+                        Editar
+                      </button>
+                    )}
                     {op.status === 'RASCUNHO' && (
                       <button
                         onClick={() => handleSubmeter(op.id)}
@@ -203,7 +355,6 @@ export default function BoletasPage() {
         />
       )}
 
-      {/* BLOCO NOVO */}
       {detalhe && (
         <DetalheBoleta operacao={detalhe} onFechar={() => setDetalhe(null)} />
       )}
