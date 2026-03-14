@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useDashboard } from '../../hooks/useDashboard'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import api from '../../api/axios'
 
 const PERIODOS = [
   { id: 'diario', label: 'Hoje' },
@@ -30,6 +31,29 @@ export default function DashboardPage() {
   const [periodo, setPeriodo] = useState('mensal')
   const { data, isLoading } = useDashboard(periodo)
 
+  const baixarRelatorio = async (formato, tipo) => {
+    try {
+      const hoje = new Date()
+      const params = {
+        ano: hoje.getFullYear(),
+        mes: hoje.getMonth() + 1,
+        dia: hoje.getDate(),
+      }
+
+      const url = `/relatorios/${formato}/${tipo}?ano=${params.ano}&mes=${params.mes}&dia=${params.dia}`
+      const response = await api.get(url, { responseType: 'blob' })
+
+      const blob = new Blob([response.data])
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `fechamento_${tipo}_${hoje.toISOString().split('T')[0]}.${formato}`
+      link.click()
+      URL.revokeObjectURL(link.href)
+    } catch {
+      alert('Erro ao gerar relatório.')
+    }
+  }
+
   if (isLoading) {
     return <p className="text-gray-500">Carregando...</p>
   }
@@ -48,20 +72,50 @@ export default function DashboardPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <div className="flex gap-2">
-          {PERIODOS.map((p) => (
+
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
             <button
-              key={p.id}
-              onClick={() => setPeriodo(p.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                periodo === p.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-              }`}
+              onClick={() => baixarRelatorio('csv', 'diario')}
+              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
             >
-              {p.label}
+              CSV Diário
             </button>
-          ))}
+            <button
+              onClick={() => baixarRelatorio('csv', 'mensal')}
+              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+            >
+              CSV Mensal
+            </button>
+            <button
+              onClick={() => baixarRelatorio('pdf', 'diario')}
+              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+            >
+              PDF Diário
+            </button>
+            <button
+              onClick={() => baixarRelatorio('pdf', 'mensal')}
+              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+            >
+              PDF Mensal
+            </button>
+          </div>
+
+          <div className="flex gap-2">
+            {PERIODOS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPeriodo(p.id)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  periodo === p.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -84,7 +138,6 @@ export default function DashboardPage() {
 
       {/* Gráficos */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        {/* Receita por Parceiro */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-5">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
             Receita por Parceiro
@@ -103,7 +156,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Market Share por Moeda */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-5">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
             Volume por Moeda

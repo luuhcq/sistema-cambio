@@ -5,6 +5,7 @@ import { useParceiros } from '../../hooks/useParceiros'
 import { usePtax } from '../../hooks/usePtax'
 import { useCriarOperacao, useEditarOperacao } from '../../hooks/useOperacoes'
 import { useSimulacao } from '../../hooks/useSimulacao'
+import { useDebounce } from '../../hooks/useDebounce'
 import PreviewCalculo from './PreviewCalculo'
 import api from '../../api/axios'
 
@@ -93,7 +94,8 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
     }
   }, [watchAll, clienteSelecionado])
 
-  const { data: simulacao, isLoading: simulacaoLoading } = useSimulacao(simulacaoPayload)
+  const debouncedPayload = useDebounce(simulacaoPayload, 400)
+  const { data: simulacao, isLoading: simulacaoLoading } = useSimulacao(debouncedPayload)
 
   const onSubmit = async (data) => {
     if (!clienteSelecionado) {

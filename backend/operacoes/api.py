@@ -7,6 +7,7 @@ from operacoes.routers.operacoes import router as operacoes_router
 from operacoes.routers.ptax import router as ptax_router
 from operacoes.routers.configuracoes import router as config_router
 from operacoes.routers.dashboard import router as dashboard_router
+from operacoes.routers.relatorios import router as relatorios_router
 
 api = NinjaAPI(
     title="Sistema de Câmbio",
@@ -20,6 +21,7 @@ api.add_router("/operacoes", operacoes_router)
 api.add_router("/ptax", ptax_router)
 api.add_router("/configuracoes", config_router)
 api.add_router("/dashboard", dashboard_router)
+api.add_router("/relatorios", relatorios_router)
 
 
 @api.get("/me", response=UserOut, auth=JWTAuth())

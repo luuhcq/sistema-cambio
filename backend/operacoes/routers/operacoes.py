@@ -22,37 +22,128 @@ router = Router(tags=["Operações"], auth=JWTAuth())
 @router.post("/simular", response={200: dict, 400: dict})
 def simular_operacao(request, payload: SimulacaoIn):
     try:
+        from decimal import Decimal, ROUND_HALF_UP
+
         cliente = get_object_or_404(Cliente, id=payload.cliente_id)
         moeda = get_object_or_404(Moeda, id=payload.moeda_id)
         parceiro = get_object_or_404(Parceiro, id=payload.parceiro_id)
 
-        op = Operacao(
-            cliente=cliente,
-            moeda=moeda,
-            montante=payload.montante,
-            parceiro=parceiro,
-            modalidade=payload.modalidade,
-            caminho=payload.caminho,
-            isencao_iof=payload.isencao_iof,
-            isencao_tarifa=payload.isencao_tarifa,
-            tarifa_negociada=payload.tarifa_negociada,
-            moeda_tarifa_negociada=payload.moeda_tarifa_negociada,
-            ptax=payload.ptax,
-            spot=payload.spot,
-            taxa_cliente=payload.taxa_cliente,
+        # Carrega configs de uma vez (3 queries no total)
+        from operacoes.models import IOFConfig, TarifaConfig, ComissaoConfig
+
+        # --- IOF ---
+        aliquota_iof = Decimal("0")
+        if not payload.isencao_iof:
+            iof = IOFConfig.objects.filter(
+                modalidade=payload.modalidade, caminho=payload.caminho
+            ).first()
+            if not iof:
+                iof = IOFConfig.objects.filter(
+                    modalidade="Demais modalidades", caminho=payload.caminho
+                ).first()
+            if iof:
+                aliquota_iof = iof.aliquota
+
+        iof_nominal = (payload.montante * aliquota_iof * payload.taxa_cliente).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+
+        # --- Tarifa ---
+        tarifa_nominal = Decimal("0")
+        if payload.tarifa_negociada:
+            valor_tarifa = payload.tarifa_negociada
+            moeda_tarifa = payload.moeda_tarifa_negociada or "BRL"
+        elif not payload.isencao_tarifa:
+            tipo = cliente.tipo
+            config = (
+                TarifaConfig.objects.filter(
+                    parceiro=parceiro, tipo_pessoa=tipo, caminho=payload.caminho
+                ).first()
+                or TarifaConfig.objects.filter(
+                    parceiro=parceiro, tipo_pessoa=tipo, caminho="AMBOS"
+                ).first()
+                or TarifaConfig.objects.filter(
+                    parceiro=parceiro, tipo_pessoa="AMBOS", caminho=payload.caminho
+                ).first()
+                or TarifaConfig.objects.filter(
+                    parceiro=parceiro, tipo_pessoa="AMBOS", caminho="AMBOS"
+                ).first()
+            )
+            if config:
+                valor_tarifa = config.valor
+                moeda_tarifa = config.moeda_tarifa
+            else:
+                valor_tarifa = None
+                moeda_tarifa = None
+        else:
+            valor_tarifa = None
+            moeda_tarifa = None
+
+        if valor_tarifa and moeda_tarifa:
+            if moeda_tarifa == "BRL":
+                tarifa_nominal = valor_tarifa
+            elif moeda_tarifa == "USD":
+                if moeda.codigo_iso == "USD":
+                    tarifa_nominal = valor_tarifa * payload.taxa_cliente
+                else:
+                    tarifa_nominal = valor_tarifa * (payload.ptax or Decimal("0"))
+            tarifa_nominal = tarifa_nominal.quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+
+        # --- VET ---
+        valor_base = (payload.montante * payload.taxa_cliente).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if payload.caminho == "SAIDA":
+            vet = valor_base + iof_nominal + tarifa_nominal
+        else:
+            vet = valor_base - iof_nominal - tarifa_nominal
+
+        # --- Spread ---
+        spread = Decimal("0")
+        spread_com_sinal = Decimal("0")
+        spread_negativo = False
+        if payload.spot and payload.spot != Decimal("0"):
+            spread = (
+                abs((payload.taxa_cliente - payload.spot) / payload.spot)
+                * Decimal("100")
+            ).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            sinal = ((payload.taxa_cliente - payload.spot) / payload.spot) * Decimal(
+                "100"
+            )
+            if payload.caminho == "ENTRADA":
+                sinal = -sinal
+            spread_com_sinal = sinal.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+
+            if payload.caminho == "SAIDA":
+                spread_negativo = payload.taxa_cliente < payload.spot
+            else:
+                spread_negativo = payload.taxa_cliente > payload.spot
+
+        # --- Comissão ---
+        comissao_bruta = Decimal("0")
+        comissao_config = ComissaoConfig.objects.filter(parceiro=parceiro).first()
+        if comissao_config and payload.spot:
+            spread_dec = spread / Decimal("100")
+            comissao_bruta = (
+                payload.spot * spread_dec * payload.montante * comissao_config.fator
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        comissao_liquida = (comissao_bruta * Decimal("0.95")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
         )
 
         return 200, {
-            "aliquota_iof": str(op.aliquota_iof),
-            "iof_nominal": str(op.iof_nominal),
-            "tarifa_nominal": str(op.tarifa_nominal),
-            "valor_base_brl": str(op.valor_base_brl),
-            "vet": str(op.vet),
-            "spread": str(op.spread),
-            "spread_com_sinal": str(op.spread_com_sinal),
-            "comissao_bruta": str(op.comissao_bruta),
-            "comissao_liquida": str(op.comissao_liquida),
-            "spread_negativo": op.spread_negativo,
+            "aliquota_iof": str(aliquota_iof),
+            "iof_nominal": str(iof_nominal),
+            "tarifa_nominal": str(tarifa_nominal),
+            "valor_base_brl": str(valor_base),
+            "vet": str(vet),
+            "spread": str(spread),
+            "spread_com_sinal": str(spread_com_sinal),
+            "comissao_bruta": str(comissao_bruta),
+            "comissao_liquida": str(comissao_liquida),
+            "spread_negativo": spread_negativo,
         }
     except Exception as e:
         return 400, {"detail": str(e)}
