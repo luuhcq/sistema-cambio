@@ -221,7 +221,7 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className={labelClass}>Montante (ME)</label>
-                <input type="number" step="0.01" {...register('montante', { required: true })} className={inputClass} />
+                <input type="number" step="0.01" min="0.01" {...register('montante', { required: true })} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Parceiro</label>
@@ -256,12 +256,12 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
 
               <div>
                 <label className={labelClass}>Spot</label>
-                <input type="number" step="0.000001" {...register('spot', { required: true })} className={inputClass} />
+                <input type="number" step="0.000001" min="0.000001" {...register('spot', { required: true })} className={inputClass} />
               </div>
 
               <div>
                 <label className={labelClass}>Taxa Cliente</label>
-                <input type="number" step="0.000001" {...register('taxa_cliente', { required: true })} className={inputClass} />
+                <input type="number" step="0.000001" min="0.000001" {...register('taxa_cliente', { required: true })} className={inputClass} />
               </div>
             </div>
 
@@ -277,6 +277,7 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
                 <input
                   type="number"
                   step="0.000001"
+                  min="0.000001"
                   {...register('ptax')}
                   disabled={moedaObj?.requer_ptax === false}
                   className={`${inputClass} ${moedaObj?.requer_ptax === false ? 'opacity-50' : ''}`}
@@ -304,7 +305,7 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className={labelClass}>Tarifa Negociada (opcional)</label>
-                <input type="number" step="0.01" {...register('tarifa_negociada')} className={inputClass} />
+                <input type="number" step="0.01" min="0" {...register('tarifa_negociada')} className={inputClass} />
               </div>
 
               <div>

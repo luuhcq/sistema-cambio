@@ -42,6 +42,10 @@ def simular_operacao(request, payload: SimulacaoIn):
         moeda = get_object_or_404(Moeda, id=payload.moeda_id)
         parceiro = get_object_or_404(Parceiro, id=payload.parceiro_id)
 
+        erros_validacao = payload.validate_valores()
+        if erros_validacao:
+            return 400, {"detail": " | ".join(erros_validacao)}
+
         # --- IOF ---
         aliquota_iof = Decimal("0")
         if not payload.isencao_iof:
@@ -153,7 +157,9 @@ def simular_operacao(request, payload: SimulacaoIn):
             "spread_negativo": spread_negativo,
         }
     except Exception as e:
-        return 400, {"detail": str(e)}
+        return 400, {
+            "detail": "Erro ao calcular simulação. Verifique os dados informados."
+        }
 
 
 @router.get("/", response=dict)
@@ -197,6 +203,10 @@ def criar_operacao(request, payload: OperacaoIn):
     if not pode_criar_boleta(request.user):
         return 403, {"detail": "Sem permissão para criar boletas."}
 
+    erros_validacao = payload.validate_valores()
+    if erros_validacao:
+        return 400, {"detail": " | ".join(erros_validacao)}
+
     try:
         cliente = get_object_or_404(Cliente, id=payload.cliente_id)
         moeda = get_object_or_404(Moeda, id=payload.moeda_id)
@@ -229,8 +239,9 @@ def criar_operacao(request, payload: OperacaoIn):
         )
         operacao.save()
         return 201, operacao
+
     except Exception as e:
-        return 400, {"detail": str(e)}
+        return 400, {"detail": "Erro ao criar boleta. Verifique os dados informados."}
 
 
 @router.put(
@@ -243,6 +254,10 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
 
     if not pode_editar_boleta(request.user, operacao):
         return 403, {"detail": "Sem permissão para editar esta operação."}
+
+    erros_validacao = payload.validate_valores()
+    if erros_validacao:
+        return 400, {"detail": " | ".join(erros_validacao)}
 
     operacao.data = payload.data
     operacao.cliente = get_object_or_404(Cliente, id=payload.cliente_id)
@@ -260,6 +275,11 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
     operacao.taxa_cliente = payload.taxa_cliente
     operacao.indicacao = payload.indicacao
 
+    is_fora = fora_horario_comercial()
+    operacao.registro_fora_horario = is_fora
+    if is_fora:
+        operacao.comentario_fora_horario = payload.comentario_fora_horario
+
     operacao._change_reason = (
         f"Editada por {request.user.get_full_name() or request.user.username}"
     )
@@ -273,10 +293,6 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
 )
 def submeter_operacao(request, operacao_id: int):
 
-    if not fora_horario_comercial():
-        return 400, {
-            "detail": "Fora do horário comercial (Seg-Sex, 9h-18h BRT). Submissão bloqueada."
-        }
     operacao = (
         Operacao.objects.select_related("cliente", "moeda", "parceiro")
         .filter(id=operacao_id)
@@ -431,13 +447,16 @@ def verificar_integridade(request, operacao_id: int):
         }
 
     integro = verificar_hmac(operacao)
-    return 200, {
+    resultado = {
         "status": "integro" if integro else "adulterado",
         "mensagem": (
             "Hash válido. Nenhuma adulteração detectada."
             if integro
             else "⚠ ALERTA: Hash não confere. Possível adulteração dos dados."
         ),
-        "hash_armazenado": operacao.hash_integridade,
-        "hash_recalculado": gerar_hmac(operacao),
     }
+
+    if not integro:
+        resultado["hash_armazenado"] = operacao.hash_integridade
+
+    return 200, resultado

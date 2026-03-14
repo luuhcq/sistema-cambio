@@ -76,6 +76,20 @@ class OperacaoIn(Schema):
     indicacao: str | None = None
     comentario_fora_horario: str | None = None
 
+    def validate_valores(self):
+        erros = []
+        if self.montante <= 0:
+            erros.append("Montante deve ser maior que zero.")
+        if self.spot <= 0:
+            erros.append("Spot deve ser maior que zero.")
+        if self.taxa_cliente <= 0:
+            erros.append("Taxa cliente deve ser maior que zero.")
+        if self.tarifa_negociada is not None and self.tarifa_negociada < 0:
+            erros.append("Tarifa negociada não pode ser negativa.")
+        if self.ptax is not None and self.ptax <= 0:
+            erros.append("PTAX deve ser maior que zero.")
+        return erros
+
 
 class OperacaoOut(Schema):
     id: int
@@ -196,6 +210,20 @@ class SimulacaoIn(Schema):
     ptax: Decimal | None = None
     spot: Decimal
     taxa_cliente: Decimal
+
+    def validate_valores(self):
+        erros = []
+        if self.montante <= 0:
+            erros.append("Montante deve ser maior que zero.")
+        if self.spot <= 0:
+            erros.append("Spot deve ser maior que zero.")
+        if self.taxa_cliente <= 0:
+            erros.append("Taxa cliente deve ser maior que zero.")
+        if self.tarifa_negociada is not None and self.tarifa_negociada < 0:
+            erros.append("Tarifa negociada não pode ser negativa.")
+        if self.ptax is not None and self.ptax <= 0:
+            erros.append("PTAX deve ser maior que zero.")
+        return erros
 
 
 class SimulacaoOut(Schema):

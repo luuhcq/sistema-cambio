@@ -17,7 +17,7 @@ def get_perfil(user):
 
 
 def is_gestor(user):
-    return get_perfil(user) in ("Gestor",) or user.is_superuser
+    return get_perfil(user) in ("Gestor",)
 
 
 def is_operador(user):
