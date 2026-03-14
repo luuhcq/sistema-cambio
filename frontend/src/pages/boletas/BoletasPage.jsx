@@ -37,29 +37,30 @@ export default function BoletasPage() {
   const [filtroDataInicio, setFiltroDataInicio] = useState('')
   const [filtroDataFim, setFiltroDataFim] = useState('')
   const [busca, setBusca] = useState('')
+  const [pagina, setPagina] = useState(1)
 
-  const { data: operacoes, isLoading } = useOperacoes()
+  const { data: operacoesData, isLoading } = useOperacoes(pagina)
   const submeter = useSubmeterOperacao()
   const aprovar = useAprovarOperacao()
   const cancelar = useCancelarOperacao()
   const excluir = useExcluirOperacao()
 
   const parceirosUnicos = useMemo(() => {
-    if (!operacoes) return []
-    const set = new Set(operacoes.map((op) => op.parceiro.nome))
+    if (!operacoesData?.items) return []
+    const set = new Set(operacoesData.items.map((op) => op.parceiro.nome))
     return [...set].sort()
-  }, [operacoes])
+  }, [operacoesData])
 
   const moedasUnicas = useMemo(() => {
-    if (!operacoes) return []
-    const set = new Set(operacoes.map((op) => op.moeda.codigo_iso))
+    if (!operacoesData?.items) return []
+    const set = new Set(operacoesData.items.map((op) => op.moeda.codigo_iso))
     return [...set].sort()
-  }, [operacoes])
+  }, [operacoesData])
 
   const operacoesFiltradas = useMemo(() => {
-    if (!operacoes) return []
+    if (!operacoesData?.items) return []
 
-    return operacoes.filter((op) => {
+    return operacoesData.items.filter((op) => {
       if (filtroStatus !== 'TODOS' && op.status !== filtroStatus) return false
       if (filtroParceiro && op.parceiro.nome !== filtroParceiro) return false
       if (filtroMoeda && op.moeda.codigo_iso !== filtroMoeda) return false
@@ -75,7 +76,7 @@ export default function BoletasPage() {
       }
       return true
     })
-  }, [operacoes, filtroStatus, filtroParceiro, filtroMoeda, filtroDataInicio, filtroDataFim, busca])
+  }, [operacoesData, filtroStatus, filtroParceiro, filtroMoeda, filtroDataInicio, filtroDataFim, busca])
 
   const limparFiltros = () => {
     setFiltroStatus('TODOS')
@@ -236,7 +237,7 @@ export default function BoletasPage() {
           )}
 
           <span className="ml-auto text-xs text-gray-400">
-            {operacoesFiltradas.length} de {operacoes?.length || 0} boletas
+            {operacoesFiltradas.length} de {operacoesData?.total || 0} boletas
           </span>
         </div>
       </div>
@@ -341,6 +342,29 @@ export default function BoletasPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Paginação */}
+      {operacoesData?.total_pages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            Anterior
+          </button>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Página {pagina} de {operacoesData.total_pages}
+          </span>
+          <button
+            onClick={() => setPagina((p) => Math.min(operacoesData.total_pages, p + 1))}
+            disabled={pagina === operacoesData?.total_pages}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
 
       {modalCancelar && (
         <ModalJustificativa

@@ -156,9 +156,27 @@ def simular_operacao(request, payload: SimulacaoIn):
         return 400, {"detail": str(e)}
 
 
-@router.get("/", response=list[OperacaoOut])
-def listar_operacoes(request):
-    return Operacao.objects.select_related("cliente", "moeda", "parceiro").all()
+@router.get("/", response=dict)
+def listar_operacoes(request, page: int = 1, page_size: int = 50):
+    qs = Operacao.objects.select_related("cliente", "moeda", "parceiro").all()
+
+    total = qs.count()
+    inicio = (page - 1) * page_size
+    fim = inicio + page_size
+    operacoes = qs[inicio:fim]
+
+    from operacoes.schemas import OperacaoOut
+
+    schema = OperacaoOut
+    items = [schema.from_orm(op) for op in operacoes]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+    }
 
 
 @router.get("/{operacao_id}", response={200: OperacaoOut, 404: dict})

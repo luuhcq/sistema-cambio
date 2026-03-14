@@ -6,6 +6,7 @@ import { usePtax } from '../../hooks/usePtax'
 import { useCriarOperacao, useEditarOperacao } from '../../hooks/useOperacoes'
 import { useSimulacao } from '../../hooks/useSimulacao'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useModalidades } from '../../hooks/useModalidades'
 import PreviewCalculo from './PreviewCalculo'
 import api from '../../api/axios'
 
@@ -15,8 +16,10 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
   const { data: ptaxData } = usePtax()
+  const { data: modalidades } = useModalidades()
   const criarOperacao = useCriarOperacao()
   const editarOperacao = useEditarOperacao()
+
 
   const [clienteBusca, setClienteBusca] = useState('')
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
@@ -220,7 +223,6 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
                 <label className={labelClass}>Montante (ME)</label>
                 <input type="number" step="0.01" {...register('montante', { required: true })} className={inputClass} />
               </div>
-
               <div>
                 <label className={labelClass}>Parceiro</label>
                 <select {...register('parceiro_id', { required: true })} className={inputClass}>
@@ -230,10 +232,14 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className={labelClass}>Modalidade</label>
-                <input type="text" {...register('modalidade', { required: true })} placeholder="Ex: Disponibilidade" className={inputClass} />
+                <select {...register('modalidade', { required: true })} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  {modalidades?.map((m) => (
+                    <option key={m.nome} value={m.nome}>{m.nome}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

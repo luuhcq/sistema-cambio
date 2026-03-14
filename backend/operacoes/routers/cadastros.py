@@ -1,5 +1,5 @@
 from ninja import Router
-from operacoes.models import Moeda, Parceiro, Cliente
+from operacoes.models import Moeda, Parceiro, Cliente, IOFConfig
 from operacoes.schemas import MoedaOut, ParceiroOut, ClienteOut, ClienteIn
 from operacoes.auth import JWTAuth
 
@@ -25,6 +25,13 @@ def listar_clientes(request, q: str = ""):
     if q:
         qs = qs.filter(cpf_cnpj__startswith=q) | qs.filter(nome__icontains=q)
     return qs
+
+
+# --- Modalidades ---
+@router.get("/modalidades", response=list[dict])
+def listar_modalidades(request):
+    modalidades = IOFConfig.objects.values_list("modalidade", flat=True).distinct()
+    return [{"nome": m} for m in modalidades if m != "Demais modalidades"]
 
 
 @router.get("/clientes/{cpf_cnpj}", response={200: ClienteOut, 404: dict})

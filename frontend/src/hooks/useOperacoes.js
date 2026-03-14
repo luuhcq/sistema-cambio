@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../api/axios'
 
-export function useOperacoes() {
+export function useOperacoes(page = 1, pageSize = 50) {
   return useQuery({
-    queryKey: ['operacoes'],
-    queryFn: () => api.get('/operacoes/').then((r) => r.data),
+    queryKey: ['operacoes', page, pageSize],
+    queryFn: () => api.get('/operacoes/', { params: { page, page_size: pageSize } }).then((r) => r.data),
   })
 }
 
@@ -60,3 +60,4 @@ export function useEditarOperacao() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operacoes'] }),
   })
 }
+
