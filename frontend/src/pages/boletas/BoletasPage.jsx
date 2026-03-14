@@ -21,6 +21,27 @@ const STATUS_CORES = {
 
 const STATUS_OPTIONS = ['TODOS', 'RASCUNHO', 'PENDENTE', 'CONFIRMADA', 'CANCELADA']
 
+function formatData(dataStr) {
+  if (!dataStr) return ''
+  const [ano, mes, dia] = dataStr.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
+function formatCaminho(caminho) {
+  if (caminho === 'SAIDA') return 'Saída'
+  if (caminho === 'ENTRADA') return 'Entrada'
+  return caminho
+}
+
+function SortIcon({ ativo, direcao }) {
+  return (
+    <span className="inline-flex flex-col ml-1 leading-none">
+      <span className={`text-[10px] ${ativo && direcao === 'asc' ? 'text-blue-600' : 'text-gray-300 dark:text-gray-600'}`}>▲</span>
+      <span className={`text-[10px] ${ativo && direcao === 'desc' ? 'text-blue-600' : 'text-gray-300 dark:text-gray-600'}`}>▼</span>
+    </span>
+  )
+}
+
 export default function BoletasPage() {
   const { user } = useAuth()
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -39,11 +60,24 @@ export default function BoletasPage() {
   const [busca, setBusca] = useState('')
   const [pagina, setPagina] = useState(1)
 
+  // Ordenação
+  const [sortField, setSortField] = useState('id')
+  const [sortDir, setSortDir] = useState('desc')
+
   const { data: operacoesData, isLoading } = useOperacoes(pagina)
   const submeter = useSubmeterOperacao()
   const aprovar = useAprovarOperacao()
   const cancelar = useCancelarOperacao()
   const excluir = useExcluirOperacao()
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
 
   const parceirosUnicos = useMemo(() => {
     if (!operacoesData?.items) return []
@@ -60,7 +94,7 @@ export default function BoletasPage() {
   const operacoesFiltradas = useMemo(() => {
     if (!operacoesData?.items) return []
 
-    return operacoesData.items.filter((op) => {
+    let resultado = operacoesData.items.filter((op) => {
       if (filtroStatus !== 'TODOS' && op.status !== filtroStatus) return false
       if (filtroParceiro && op.parceiro.nome !== filtroParceiro) return false
       if (filtroMoeda && op.moeda.codigo_iso !== filtroMoeda) return false
@@ -76,7 +110,29 @@ export default function BoletasPage() {
       }
       return true
     })
-  }, [operacoesData, filtroStatus, filtroParceiro, filtroMoeda, filtroDataInicio, filtroDataFim, busca])
+
+    // Ordenação
+    resultado = [...resultado].sort((a, b) => {
+      let valA, valB
+      switch (sortField) {
+        case 'id': valA = a.id; valB = b.id; break
+        case 'data': valA = a.data; valB = b.data; break
+        case 'cliente': valA = a.cliente.nome.toLowerCase(); valB = b.cliente.nome.toLowerCase(); break
+        case 'moeda': valA = a.moeda.codigo_iso; valB = b.moeda.codigo_iso; break
+        case 'montante': valA = Number(a.montante); valB = Number(b.montante); break
+        case 'parceiro': valA = a.parceiro.nome.toLowerCase(); valB = b.parceiro.nome.toLowerCase(); break
+        case 'caminho': valA = a.caminho; valB = b.caminho; break
+        case 'vet': valA = Number(a.vet); valB = Number(b.vet); break
+        case 'status': valA = a.status; valB = b.status; break
+        default: valA = a.id; valB = b.id
+      }
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return resultado
+  }, [operacoesData, filtroStatus, filtroParceiro, filtroMoeda, filtroDataInicio, filtroDataFim, busca, sortField, sortDir])
 
   const limparFiltros = () => {
     setFiltroStatus('TODOS')
@@ -130,6 +186,7 @@ export default function BoletasPage() {
   const isGestor = user?.perfil === 'Gestor'
 
   const selectClass = 'px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const thSortClass = 'px-4 py-3 text-gray-600 dark:text-gray-400 font-medium cursor-pointer select-none hover:text-gray-900 dark:hover:text-gray-200 transition-colors'
 
   if (isLoading) {
     return <p className="text-gray-500">Carregando...</p>
@@ -247,15 +304,15 @@ export default function BoletasPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">#</th>
-              <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">Data</th>
-              <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">Cliente</th>
-              <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">Moeda</th>
-              <th className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 font-medium">Montante</th>
-              <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">Parceiro</th>
-              <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">Caminho</th>
-              <th className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 font-medium">VET (BRL)</th>
-              <th className="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-medium">Status</th>
+              <th className={`${thSortClass} text-left`} onClick={() => handleSort('id')}># <SortIcon ativo={sortField === 'id'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-left`} onClick={() => handleSort('data')}>Data <SortIcon ativo={sortField === 'data'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-left`} onClick={() => handleSort('cliente')}>Cliente <SortIcon ativo={sortField === 'cliente'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-left`} onClick={() => handleSort('moeda')}>Moeda <SortIcon ativo={sortField === 'moeda'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-right`} onClick={() => handleSort('montante')}>Montante <SortIcon ativo={sortField === 'montante'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-left`} onClick={() => handleSort('parceiro')}>Parceiro <SortIcon ativo={sortField === 'parceiro'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-left`} onClick={() => handleSort('caminho')}>Caminho <SortIcon ativo={sortField === 'caminho'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-right`} onClick={() => handleSort('vet')}>VET (BRL) <SortIcon ativo={sortField === 'vet'} direcao={sortDir} /></th>
+              <th className={`${thSortClass} text-center`} onClick={() => handleSort('status')}>Status <SortIcon ativo={sortField === 'status'} direcao={sortDir} /></th>
               <th className="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-medium">Ações</th>
             </tr>
           </thead>
@@ -274,14 +331,14 @@ export default function BoletasPage() {
                 className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
               >
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{op.id}</td>
-                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.data}</td>
+                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{formatData(op.data)}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.cliente.nome}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.moeda.codigo_iso}</td>
                 <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                   {Number(op.montante).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.parceiro.nome}</td>
-                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{op.caminho}</td>
+                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{formatCaminho(op.caminho)}</td>
                 <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
                   {Number(op.vet).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </td>

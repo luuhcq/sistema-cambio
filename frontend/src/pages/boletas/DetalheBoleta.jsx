@@ -7,6 +7,18 @@ function formatBRL(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function formatData(dataStr) {
+  if (!dataStr) return ''
+  const [ano, mes, dia] = dataStr.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
+function formatCaminho(caminho) {
+  if (caminho === 'SAIDA') return 'Saída (Envio)'
+  if (caminho === 'ENTRADA') return 'Entrada (Recebimento)'
+  return caminho
+}
+
 function Campo({ label, valor, destaque, alerta }) {
   return (
     <div>
@@ -154,13 +166,13 @@ export default function DetalheBoleta({ operacao, onFechar }) {
               Dados da Operação
             </h3>
             <div className="grid grid-cols-4 gap-4">
-              <Campo label="Data" valor={op.data} />
+              <Campo label="Data" valor={formatData(op.data)} />
               <Campo label="Cliente" valor={op.cliente.nome} />
               <Campo label="Moeda" valor={`${op.moeda.codigo_iso} - ${op.moeda.nome}`} />
               <Campo label="Montante (ME)" valor={Number(op.montante).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} />
               <Campo label="Parceiro" valor={op.parceiro.nome} />
               <Campo label="Modalidade" valor={op.modalidade} />
-              <Campo label="Caminho" valor={op.caminho === 'SAIDA' ? 'Saída (Envio)' : 'Entrada (Recebimento)'} />
+              <Campo label="Caminho" valor={formatCaminho(op.caminho)} />
               <Campo label="Indicação" valor={op.indicacao || '—'} />
             </div>
           </div>
@@ -171,12 +183,12 @@ export default function DetalheBoleta({ operacao, onFechar }) {
               Taxas
             </h3>
             <div className="grid grid-cols-4 gap-4">
-              <Campo label="Spot" valor={Number(op.spot).toFixed(6)} />
-              <Campo label="Taxa Cliente" valor={Number(op.taxa_cliente).toFixed(6)} />
-              <Campo label="PTAX D-1" valor={op.ptax ? Number(op.ptax).toFixed(6) : 'N/A'} />
+              <Campo label="Spot" valor={Number(op.spot).toFixed(6).replace('.', ',')} />
+              <Campo label="Taxa Cliente" valor={Number(op.taxa_cliente).toFixed(6).replace('.', ',')} />
+              <Campo label="PTAX D-1" valor={op.ptax ? Number(op.ptax).toFixed(6).replace('.', ',') : 'N/A'} />
               <Campo
                 label="Spread"
-                valor={`${spreadNegativo ? '−' : ''}${Number(op.spread).toFixed(4)}%`}
+                valor={`${spreadNegativo ? '−' : ''}${Number(op.spread).toFixed(4).replace('.', ',')}%`}
                 alerta={spreadNegativo}
               />
             </div>
@@ -197,7 +209,7 @@ export default function DetalheBoleta({ operacao, onFechar }) {
             )}
 
             <div className="grid grid-cols-4 gap-4">
-              <Campo label="Alíquota IOF" valor={`${(Number(op.aliquota_iof) * 100).toFixed(2)}%`} />
+              <Campo label="Alíquota IOF" valor={`${(Number(op.aliquota_iof) * 100).toFixed(2).replace('.', ',')}%`} />
               <Campo label="IOF Nominal" valor={formatBRL(op.iof_nominal)} />
               <Campo label="Tarifa Nominal" valor={formatBRL(op.tarifa_nominal)} />
               <Campo label="Base (Montante × Taxa)" valor={formatBRL(op.valor_base_brl)} />
@@ -215,7 +227,7 @@ export default function DetalheBoleta({ operacao, onFechar }) {
             <div className="grid grid-cols-4 gap-4">
               <Campo label="Isento de IOF" valor={op.isencao_iof ? 'Sim' : 'Não'} />
               <Campo label="Isento de Tarifa" valor={op.isencao_tarifa ? 'Sim' : 'Não'} />
-              <Campo label="Tarifa Negociada" valor={op.tarifa_negociada ? `${Number(op.tarifa_negociada).toFixed(2)} ${op.moeda_tarifa_negociada}` : '—'} />
+              <Campo label="Tarifa Negociada" valor={op.tarifa_negociada ? `${Number(op.tarifa_negociada).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${op.moeda_tarifa_negociada}` : '—'} />
             </div>
           </div>
 
