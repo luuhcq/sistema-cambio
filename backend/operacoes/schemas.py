@@ -74,6 +74,7 @@ class OperacaoIn(Schema):
     spot: Decimal
     taxa_cliente: Decimal
     indicacao: str | None = None
+    comentario_fora_horario: str | None = None
 
 
 class OperacaoOut(Schema):
@@ -95,6 +96,8 @@ class OperacaoOut(Schema):
     indicacao: str | None
     status: str
     hash_integridade: str
+    registro_fora_horario: bool
+    comentario_fora_horario: str | None = None
 
     # Campos calculados
     aliquota_iof: Decimal

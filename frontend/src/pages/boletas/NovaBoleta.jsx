@@ -22,6 +22,7 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
   const [clientesResultado, setClientesResultado] = useState([])
   const [erro, setErro] = useState('')
+  const [foraHorario, setForaHorario] = useState(false)
 
   // Preenche o form quando editar
   useEffect(() => {
@@ -69,6 +70,19 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
       setClientesResultado([])
     }
   }, [clienteBusca, clienteSelecionado])
+
+  // Verifica o horário local
+  useEffect(() => {
+  const agora = new Date()
+  const hora = agora.toLocaleString('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    hour: 'numeric',
+    hour12: false,
+  })
+  const diaSemana = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()
+  const horaNum = parseInt(hora)
+  setForaHorario(diaSemana === 0 || diaSemana === 6 || horaNum < 9 || horaNum >= 18)
+}, [])
 
   // Payload de simulação
   const simulacaoPayload = useMemo(() => {
@@ -296,6 +310,21 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
                 </select>
               </div>
             </div>
+
+            {/* Disclaimer fora do horário */}
+            {foraHorario && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-400 mb-2">
+                  ⚠ Registro fora do horário comercial (Seg-Sex, 9h-18h)
+                </p>
+                <input
+                  type="text"
+                  {...register('comentario_fora_horario')}
+                  placeholder='Justificativa opcional, para fins de controle interno.'
+                  className={`${inputClass} border-amber-300 dark:border-amber-700`}
+                />
+              </div>
+            )}
 
             {erro && (
               <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>

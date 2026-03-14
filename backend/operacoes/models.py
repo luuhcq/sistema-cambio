@@ -252,6 +252,14 @@ class Operacao(models.Model):
         max_length=200, null=True, blank=True, verbose_name="Indicação (Finder)"
     )
 
+    # Horário
+    registro_fora_horario = models.BooleanField(
+        default=False, verbose_name="Registrado fora do horário"
+    )
+    comentario_fora_horario = models.CharField(
+        max_length=500, null=True, blank=True, verbose_name="Comentário fora do horário"
+    )
+
     # Controle
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default="RASCUNHO", verbose_name="Status"

@@ -204,6 +204,20 @@ export default function DetalheBoleta({ operacao, onFechar }) {
             </div>
           </div>
 
+          {/* Registro fora do horário */}
+          {op.registro_fora_horario && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
+                Registro Fora do Horário
+              </h3>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <p className="text-sm text-amber-800 dark:text-amber-400">
+                  {op.comentario_fora_horario || 'Sem comentário adicional.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Integridade */}
           {op.hash_integridade && (
             <div>

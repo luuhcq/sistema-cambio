@@ -29,6 +29,7 @@ from operacoes.permissions import (
     pode_cancelar,
     pode_excluir,
     is_auditor,
+    fora_horario_comercial,
 )
 
 router = Router(tags=["Operações"], auth=JWTAuth())
@@ -174,6 +175,7 @@ def detalhar_operacao(request, operacao_id: int):
 
 @router.post("/", response={201: OperacaoOut, 400: dict, 403: dict})
 def criar_operacao(request, payload: OperacaoIn):
+
     if not pode_criar_boleta(request.user):
         return 403, {"detail": "Sem permissão para criar boletas."}
 
@@ -181,6 +183,8 @@ def criar_operacao(request, payload: OperacaoIn):
         cliente = get_object_or_404(Cliente, id=payload.cliente_id)
         moeda = get_object_or_404(Moeda, id=payload.moeda_id)
         parceiro = get_object_or_404(Parceiro, id=payload.parceiro_id)
+
+        is_fora = fora_horario_comercial()
 
         operacao = Operacao(
             data=payload.data,
@@ -200,6 +204,10 @@ def criar_operacao(request, payload: OperacaoIn):
             indicacao=payload.indicacao,
             status="RASCUNHO",
             criado_por=request.user,
+            registro_fora_horario=is_fora,
+            comentario_fora_horario=(
+                payload.comentario_fora_horario if is_fora else None
+            ),
         )
         operacao.save()
         return 201, operacao
@@ -242,6 +250,11 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
     response={200: OperacaoOut, 400: dict, 403: dict, 404: dict},
 )
 def submeter_operacao(request, operacao_id: int):
+
+    if not dentro_horario_comercial():
+        return 400, {
+            "detail": "Fora do horário comercial (Seg-Sex, 9h-18h BRT). Submissão bloqueada."
+        }
     operacao = (
         Operacao.objects.select_related("cliente", "moeda", "parceiro")
         .filter(id=operacao_id)

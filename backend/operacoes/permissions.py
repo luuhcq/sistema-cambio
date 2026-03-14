@@ -1,3 +1,7 @@
+from datetime import datetime
+import pytz
+
+
 def get_perfil(user):
     """Retorna o perfil do usuário baseado no grupo."""
     if user.is_superuser:
@@ -57,3 +61,19 @@ def pode_cancelar(user):
 
 def pode_excluir(user):
     return is_gestor(user)
+
+
+def fora_horario_comercial():
+    """Verifica se está dentro do horário comercial bancário brasileiro."""
+    tz = pytz.timezone("America/Sao_Paulo")
+    agora = datetime.now(tz)
+
+    # Final de semana
+    if agora.weekday() >= 5:
+        return True
+
+    # Horário comercial: 9h às 18h
+    if agora.hour < 9 or agora.hour >= 18:
+        return True
+
+    return False
