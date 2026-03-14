@@ -24,6 +24,16 @@ def login(request, payload: LoginIn):
 def refresh_token(request, refresh: str):
     try:
         token = RefreshToken(refresh)
+        user_id = token["user_id"]
+
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user = User.objects.filter(id=user_id, is_active=True).first()
+
+        if not user:
+            return 401, {"detail": "Usuário inativo ou inexistente."}
+
         return 200, {
             "access": str(token.access_token),
             "refresh": str(token),
