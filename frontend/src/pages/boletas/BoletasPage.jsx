@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext'
 import NovaBoleta from './NovaBoleta'
 import ModalJustificativa from '../../components/ModalJustificativa'
 import DetalheBoleta from './DetalheBoleta'
+import PainelSolicitacoes from './PainelSolicitacoes'
 
 const STATUS_CORES = {
   RASCUNHO: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -125,7 +126,7 @@ export default function BoletasPage() {
     }
   }
 
-  const isGestor = user?.is_staff
+  const isGestor = user?.perfil === 'Gestor'
 
   const selectClass = 'px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 
@@ -163,6 +164,8 @@ export default function BoletasPage() {
           />
         </div>
       )}
+
+      <PainelSolicitacoes />
 
       {/* Barra de Filtros */}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-4 mb-4">

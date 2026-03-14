@@ -479,3 +479,39 @@ class LogExclusaoBoleta(models.Model):
 
     def __str__(self):
         return f"Exclusão #{self.id} | {self.excluido_em} | por {self.excluido_por}"
+
+
+class SolicitacaoEdicao(models.Model):
+    STATUS_CHOICES = [
+        ("PENDENTE", "Pendente"),
+        ("APROVADA", "Aprovada"),
+        ("REJEITADA", "Rejeitada"),
+    ]
+
+    operacao = models.ForeignKey(
+        Operacao, on_delete=models.CASCADE, related_name="solicitacoes_edicao"
+    )
+    solicitado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="solicitacoes_edicao",
+    )
+    justificativa = models.TextField(verbose_name="Justificativa")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDENTE")
+    respondido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="respostas_edicao",
+    )
+    respondido_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        verbose_name = "Solicitação de Edição"
+        verbose_name_plural = "Solicitações de Edição"
+
+    def __str__(self):
+        return f"Solicitação #{self.id} | Boleta #{self.operacao.id} | {self.status}"

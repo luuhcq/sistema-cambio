@@ -1,19 +1,34 @@
 from ninja import Router
 from django.shortcuts import get_object_or_404
-from operacoes.models import Operacao, Cliente, Moeda, Parceiro
-from operacoes.schemas import OperacaoIn, OperacaoOut
-from operacoes.auth import JWTAuth
-from operacoes.models import Operacao, Cliente, Moeda, Parceiro, LogExclusaoBoleta
-from operacoes.schemas import OperacaoIn, OperacaoOut, CancelarIn, ExcluirIn
-from operacoes.hmac_utils import gerar_hmac
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
+
+from operacoes.models import (
+    Operacao,
+    Cliente,
+    Moeda,
+    Parceiro,
+    LogExclusaoBoleta,
+    IOFConfig,
+    TarifaConfig,
+    ComissaoConfig,
+)
 from operacoes.schemas import (
     OperacaoIn,
     OperacaoOut,
     CancelarIn,
     ExcluirIn,
     SimulacaoIn,
-    SimulacaoOut,
+)
+from operacoes.auth import JWTAuth
+from operacoes.hmac_utils import gerar_hmac
+from operacoes.permissions import (
+    pode_criar_boleta,
+    pode_editar_boleta,
+    pode_submeter_boleta,
+    pode_aprovar,
+    pode_cancelar,
+    pode_excluir,
+    is_auditor,
 )
 
 router = Router(tags=["Operações"], auth=JWTAuth())
@@ -22,14 +37,9 @@ router = Router(tags=["Operações"], auth=JWTAuth())
 @router.post("/simular", response={200: dict, 400: dict})
 def simular_operacao(request, payload: SimulacaoIn):
     try:
-        from decimal import Decimal, ROUND_HALF_UP
-
         cliente = get_object_or_404(Cliente, id=payload.cliente_id)
         moeda = get_object_or_404(Moeda, id=payload.moeda_id)
         parceiro = get_object_or_404(Parceiro, id=payload.parceiro_id)
-
-        # Carrega configs de uma vez (3 queries no total)
-        from operacoes.models import IOFConfig, TarifaConfig, ComissaoConfig
 
         # --- IOF ---
         aliquota_iof = Decimal("0")
@@ -50,6 +60,9 @@ def simular_operacao(request, payload: SimulacaoIn):
 
         # --- Tarifa ---
         tarifa_nominal = Decimal("0")
+        valor_tarifa = None
+        moeda_tarifa = None
+
         if payload.tarifa_negociada:
             valor_tarifa = payload.tarifa_negociada
             moeda_tarifa = payload.moeda_tarifa_negociada or "BRL"
@@ -72,12 +85,6 @@ def simular_operacao(request, payload: SimulacaoIn):
             if config:
                 valor_tarifa = config.valor
                 moeda_tarifa = config.moeda_tarifa
-            else:
-                valor_tarifa = None
-                moeda_tarifa = None
-        else:
-            valor_tarifa = None
-            moeda_tarifa = None
 
         if valor_tarifa and moeda_tarifa:
             if moeda_tarifa == "BRL":
@@ -115,7 +122,6 @@ def simular_operacao(request, payload: SimulacaoIn):
             if payload.caminho == "ENTRADA":
                 sinal = -sinal
             spread_com_sinal = sinal.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-
             if payload.caminho == "SAIDA":
                 spread_negativo = payload.taxa_cliente < payload.spot
             else:
@@ -166,8 +172,11 @@ def detalhar_operacao(request, operacao_id: int):
     return 200, operacao
 
 
-@router.post("/", response={201: OperacaoOut, 400: dict})
+@router.post("/", response={201: OperacaoOut, 400: dict, 403: dict})
 def criar_operacao(request, payload: OperacaoIn):
+    if not pode_criar_boleta(request.user):
+        return 403, {"detail": "Sem permissão para criar boletas."}
+
     try:
         cliente = get_object_or_404(Cliente, id=payload.cliente_id)
         moeda = get_object_or_404(Moeda, id=payload.moeda_id)
@@ -206,12 +215,8 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
     if not operacao:
         return 404, {"detail": "Operação não encontrada."}
 
-    # Operador só edita próprias boletas em RASCUNHO
-    if not request.user.is_staff:
-        if operacao.criado_por != request.user:
-            return 403, {"detail": "Sem permissão para editar esta operação."}
-        if operacao.status != "RASCUNHO":
-            return 403, {"detail": "Operação não está em rascunho."}
+    if not pode_editar_boleta(request.user, operacao):
+        return 403, {"detail": "Sem permissão para editar esta operação."}
 
     operacao.data = payload.data
     operacao.cliente = get_object_or_404(Cliente, id=payload.cliente_id)
@@ -248,18 +253,11 @@ def submeter_operacao(request, operacao_id: int):
     if operacao.status != "RASCUNHO":
         return 400, {"detail": "Apenas rascunhos podem ser submetidos."}
 
-    if not request.user.is_staff and operacao.criado_por != request.user:
+    if not pode_submeter_boleta(request.user, operacao):
         return 403, {"detail": "Sem permissão."}
 
     operacao.status = "PENDENTE"
     operacao.save()
-
-    spread_info = {}
-    if operacao.spread_negativo:
-        spread_info = {
-            "aviso": "Spread negativo detectado. Boleta requer aprovação do Gestor."
-        }
-
     return 200, operacao
 
 
@@ -276,7 +274,7 @@ def aprovar_operacao(request, operacao_id: int):
     if not operacao:
         return 404, {"detail": "Operação não encontrada."}
 
-    if not request.user.is_staff:
+    if not pode_aprovar(request.user):
         return 403, {"detail": "Apenas gestores podem aprovar operações."}
 
     if operacao.status != "PENDENTE":
@@ -301,7 +299,7 @@ def cancelar_operacao(request, operacao_id: int, payload: CancelarIn):
     if not operacao:
         return 404, {"detail": "Operação não encontrada."}
 
-    if not request.user.is_staff:
+    if not pode_cancelar(request.user):
         return 403, {"detail": "Apenas gestores podem cancelar operações."}
 
     if operacao.status == "CANCELADA":
@@ -322,13 +320,12 @@ def excluir_operacao(request, operacao_id: int, payload: ExcluirIn):
     if not operacao:
         return 404, {"detail": "Operação não encontrada."}
 
-    if not request.user.is_staff:
+    if not pode_excluir(request.user):
         return 403, {"detail": "Apenas gestores podem excluir operações."}
 
     if not payload.justificativa or len(payload.justificativa.strip()) < 10:
         return 400, {"detail": "Justificativa deve ter no mínimo 10 caracteres."}
 
-    # Snapshot completo antes de excluir
     snapshot = {
         "id": operacao.id,
         "data": str(operacao.data),

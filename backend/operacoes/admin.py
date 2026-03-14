@@ -9,6 +9,7 @@ from .models import (
     IOFConfig,
     Operacao,
     LogExclusaoBoleta,
+    SolicitacaoEdicao,
 )
 
 
@@ -81,3 +82,10 @@ class LogExclusaoBoletaAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(SolicitacaoEdicao)
+class SolicitacaoEdicaoAdmin(admin.ModelAdmin):
+    list_display = ["id", "operacao", "solicitado_por", "status", "criado_em"]
+    list_filter = ["status"]
+    readonly_fields = ["operacao", "solicitado_por", "justificativa", "criado_em"]

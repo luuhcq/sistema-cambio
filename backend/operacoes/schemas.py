@@ -1,5 +1,5 @@
 from ninja import Schema
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 
@@ -21,6 +21,13 @@ class UserOut(Schema):
     last_name: str
     email: str
     is_staff: bool
+    perfil: str = None
+
+    @staticmethod
+    def resolve_perfil(obj):
+        from operacoes.permissions import get_perfil
+
+        return get_perfil(obj)
 
 
 # --- Moeda ---
@@ -199,3 +206,20 @@ class SimulacaoOut(Schema):
     comissao_bruta: Decimal
     comissao_liquida: Decimal
     spread_negativo: bool
+
+
+# --- Solicitação de Edição ---
+class SolicitacaoEdicaoIn(Schema):
+    operacao_id: int
+    justificativa: str
+
+
+class SolicitacaoEdicaoOut(Schema):
+    id: int
+    operacao_id: int
+    solicitado_por: UserOut
+    justificativa: str
+    status: str
+    respondido_por: UserOut | None = None
+    respondido_em: datetime | None = None
+    criado_em: datetime

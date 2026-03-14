@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import { useCriarSolicitacao } from '../../hooks/useSolicitacoes'
+
 function formatBRL(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
@@ -28,13 +32,37 @@ const STATUS_CORES = {
 
 export default function DetalheBoleta({ operacao, onFechar }) {
   const op = operacao
+  const { user } = useAuth()
+  const criarSolicitacao = useCriarSolicitacao()
+  const [mostrarSolicitacao, setMostrarSolicitacao] = useState(false)
+  const [justificativa, setJustificativa] = useState('')
+  const [erroSolicitacao, setErroSolicitacao] = useState('')
+  const [sucessoSolicitacao, setSucessoSolicitacao] = useState('')
+
   const spreadNegativo = op.caminho === 'SAIDA'
     ? Number(op.taxa_cliente) < Number(op.spot)
     : Number(op.taxa_cliente) > Number(op.spot)
 
-  const spreadComSinal = op.caminho === 'SAIDA'
-    ? ((Number(op.taxa_cliente) - Number(op.spot)) / Number(op.spot)) * 100
-    : -((Number(op.taxa_cliente) - Number(op.spot)) / Number(op.spot)) * 100
+  const podeSolicitar = op.status === 'PENDENTE' || op.status === 'CONFIRMADA'
+
+  const handleSolicitar = async () => {
+    if (justificativa.trim().length < 10) {
+      setErroSolicitacao('Justificativa deve ter no mínimo 10 caracteres.')
+      return
+    }
+    setErroSolicitacao('')
+    try {
+      await criarSolicitacao.mutateAsync({
+        operacao_id: op.id,
+        justificativa,
+      })
+      setSucessoSolicitacao('Solicitação enviada. Aguardando aprovação do Gestor.')
+      setMostrarSolicitacao(false)
+      setJustificativa('')
+    } catch (e) {
+      setErroSolicitacao(e.response?.data?.detail || 'Erro ao solicitar edição.')
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -49,15 +77,62 @@ export default function DetalheBoleta({ operacao, onFechar }) {
               {op.status}
             </span>
           </div>
-          <button
-            onClick={onFechar}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            {podeSolicitar && (
+              <button
+                onClick={() => setMostrarSolicitacao(!mostrarSolicitacao)}
+                className="px-3 py-1.5 text-xs font-medium text-amber-600 border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              >
+                Solicitar Edição
+              </button>
+            )}
+            <button
+              onClick={onFechar}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Solicitação de edição */}
+          {mostrarSolicitacao && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">
+                Solicitar Edição
+              </h3>
+              <textarea
+                value={justificativa}
+                onChange={(e) => {
+                  setJustificativa(e.target.value)
+                  setErroSolicitacao('')
+                }}
+                placeholder="Descreva o motivo da edição (mínimo 10 caracteres)..."
+                rows={3}
+                className="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+              />
+              {erroSolicitacao && (
+                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{erroSolicitacao}</p>
+              )}
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={handleSolicitar}
+                  disabled={criarSolicitacao.isPending}
+                  className="px-4 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                >
+                  {criarSolicitacao.isPending ? 'Enviando...' : 'Enviar Solicitação'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sucessoSolicitacao && (
+            <div className="px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm text-green-700 dark:text-green-400">{sucessoSolicitacao}</p>
+            </div>
+          )}
+
           {/* Dados da Operação */}
           <div>
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
