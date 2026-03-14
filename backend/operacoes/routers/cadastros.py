@@ -23,7 +23,9 @@ def listar_parceiros(request):
 def listar_clientes(request, q: str = ""):
     qs = Cliente.objects.filter(ativo=True)
     if q:
-        qs = qs.filter(cpf_cnpj__startswith=q) | qs.filter(nome__icontains=q)
+        qs = qs.filter(
+            cpf_cnpj__startswith=q.replace(".", "").replace("-", "").replace("/", "")
+        ) | qs.filter(nome__unaccent__icontains=q)
     return qs
 
 

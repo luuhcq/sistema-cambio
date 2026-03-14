@@ -259,6 +259,10 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
     operacao.spot = payload.spot
     operacao.taxa_cliente = payload.taxa_cliente
     operacao.indicacao = payload.indicacao
+
+    operacao._change_reason = (
+        f"Editada por {request.user.get_full_name() or request.user.username}"
+    )
     operacao.save()
     return 200, operacao
 
@@ -269,7 +273,7 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
 )
 def submeter_operacao(request, operacao_id: int):
 
-    if not dentro_horario_comercial():
+    if not fora_horario_comercial():
         return 400, {
             "detail": "Fora do horário comercial (Seg-Sex, 9h-18h BRT). Submissão bloqueada."
         }
@@ -288,6 +292,9 @@ def submeter_operacao(request, operacao_id: int):
         return 403, {"detail": "Sem permissão."}
 
     operacao.status = "PENDENTE"
+    operacao._change_reason = (
+        f"Submetida por {request.user.get_full_name() or request.user.username}"
+    )
     operacao.save()
     return 200, operacao
 
@@ -313,6 +320,9 @@ def aprovar_operacao(request, operacao_id: int):
 
     operacao.status = "CONFIRMADA"
     operacao.hash_integridade = gerar_hmac(operacao)
+    operacao._change_reason = (
+        f"Aprovada por {request.user.get_full_name() or request.user.username}"
+    )
     operacao.save()
     return 200, operacao
 
@@ -337,6 +347,7 @@ def cancelar_operacao(request, operacao_id: int, payload: CancelarIn):
         return 400, {"detail": "Operação já está cancelada."}
 
     operacao.status = "CANCELADA"
+    operacao._change_reason = f"Cancelada por {request.user.get_full_name() or request.user.username}. Motivo: {payload.justificativa}"
     operacao.save()
     return 200, operacao
 
@@ -348,11 +359,17 @@ def excluir_operacao(request, operacao_id: int, payload: ExcluirIn):
         .filter(id=operacao_id)
         .first()
     )
+
     if not operacao:
         return 404, {"detail": "Operação não encontrada."}
 
     if not pode_excluir(request.user):
         return 403, {"detail": "Apenas gestores podem excluir operações."}
+
+    if operacao.status != "CANCELADA":
+        return 400, {
+            "detail": "A boleta deve ser cancelada antes de ser excluída fisicamente."
+        }
 
     if not payload.justificativa or len(payload.justificativa.strip()) < 10:
         return 400, {"detail": "Justificativa deve ter no mínimo 10 caracteres."}
@@ -377,6 +394,19 @@ def excluir_operacao(request, operacao_id: int, payload: ExcluirIn):
         "comissao_liquida": str(operacao.comissao_liquida),
         "hash_integridade": operacao.hash_integridade,
     }
+
+    # Captura histórico completo de alterações antes de excluir
+    historico = []
+    for h in operacao.history.all():
+        historico.append(
+            {
+                "data_alteracao": str(h.history_date),
+                "usuario": str(h.history_user) if h.history_user else None,
+                "tipo": h.history_type,
+                "motivo": h.history_change_reason or "",
+            }
+        )
+    snapshot["historico_alteracoes"] = historico
 
     LogExclusaoBoleta.objects.create(
         dados_boleta=snapshot,

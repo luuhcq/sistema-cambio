@@ -317,39 +317,35 @@ class Operacao(models.Model):
 
     @property
     def tarifa_base(self):
-        """Resolve a tarifa base a partir da TarifaConfig."""
+        """Resolve a tarifa base a partir da TarifaConfig. Retorna sempre (valor, moeda)."""
         from decimal import Decimal
 
         if self.isencao_tarifa or self.tarifa_negociada:
-            return Decimal("0")
+            return Decimal("0"), None
 
-        tipo = self.cliente.tipo  # PF ou PJ
+        tipo = self.cliente.tipo
 
-        # Busca exata: parceiro + tipo + caminho
         config = TarifaConfig.objects.filter(
             parceiro=self.parceiro, tipo_pessoa=tipo, caminho=self.caminho
         ).first()
 
-        # Fallback 1: tipo exato + caminho AMBOS
         if not config:
             config = TarifaConfig.objects.filter(
                 parceiro=self.parceiro, tipo_pessoa=tipo, caminho="AMBOS"
             ).first()
 
-        # Fallback 2: tipo AMBOS + caminho exato
         if not config:
             config = TarifaConfig.objects.filter(
                 parceiro=self.parceiro, tipo_pessoa="AMBOS", caminho=self.caminho
             ).first()
 
-        # Fallback 3: AMBOS + AMBOS
         if not config:
             config = TarifaConfig.objects.filter(
                 parceiro=self.parceiro, tipo_pessoa="AMBOS", caminho="AMBOS"
             ).first()
 
         if not config:
-            return Decimal("0")
+            return Decimal("0"), None
 
         return config.valor, config.moeda_tarifa
 
@@ -358,18 +354,14 @@ class Operacao(models.Model):
         """Converte a tarifa para BRL conforme regras do Blueprint."""
         from decimal import Decimal, ROUND_HALF_UP
 
-        # Tarifa negociada tem prioridade
         if self.tarifa_negociada:
             valor = self.tarifa_negociada
             moeda = self.moeda_tarifa_negociada or "BRL"
         else:
-            resultado = self.tarifa_base
-            if isinstance(resultado, tuple):
-                valor, moeda = resultado
-            else:
+            valor, moeda = self.tarifa_base
+            if not moeda:
                 return Decimal("0")
 
-        # Conversão para BRL
         if moeda == "BRL":
             nominal = valor
         elif moeda == "USD":

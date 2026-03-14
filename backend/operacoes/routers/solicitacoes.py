@@ -78,10 +78,11 @@ def aprovar_solicitacao(request, solicitacao_id: int):
     solicitacao.respondido_em = timezone.now()
     solicitacao.save()
 
-    # Volta a boleta pra RASCUNHO pra permitir edição
+    # Volta a boleta pra RASCUNHO com registro de quem autorizou
     operacao = solicitacao.operacao
     operacao.status = "RASCUNHO"
     operacao.hash_integridade = ""
+    operacao._change_reason = f"Edição autorizada por {request.user.get_full_name() or request.user.username}. Motivo: {solicitacao.justificativa}"
     operacao.save()
 
     return 200, solicitacao

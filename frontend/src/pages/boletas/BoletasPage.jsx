@@ -327,7 +327,7 @@ export default function BoletasPage() {
                         Cancelar
                       </button>
                     )}
-                    {isGestor && (
+                    {isGestor && op.status === 'CANCELADA' && (
                       <button
                         onClick={() => setModalExcluir(op.id)}
                         className="px-2 py-1 text-xs font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
