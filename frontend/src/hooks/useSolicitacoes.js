@@ -34,3 +34,14 @@ export function useRejeitarSolicitacao() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['solicitacoes'] }),
   })
 }
+
+export function useVisualizarSolicitacao() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => api.post(`/solicitacoes/${id}/visualizar`).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['solicitacoes'] })
+      queryClient.invalidateQueries({ queryKey: ['pendencias'] })
+    },
+  })
+}

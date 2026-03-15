@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useSolicitacoes, useAprovarSolicitacao, useRejeitarSolicitacao } from '../../hooks/useSolicitacoes'
+import { useSolicitacoes, useAprovarSolicitacao, useRejeitarSolicitacao, useVisualizarSolicitacao } from '../../hooks/useSolicitacoes'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
 
@@ -109,11 +109,15 @@ function ModalDiff({ solicitacao, onFechar }) {
   const [simAntes, setSimAntes] = useState(null)
   const [simDepois, setSimDepois] = useState(null)
   const [carregandoSim, setCarregandoSim] = useState(true)
+  const visualizar = useVisualizarSolicitacao()
 
   const isGestor = user?.perfil === 'Gestor'
   const isPendente = solicitacao.status === 'PENDENTE'
 
   useState(() => {
+    if (solicitacao.status !== 'PENDENTE' && !solicitacao.visualizada_em) {
+  visualizar.mutate(solicitacao.id)
+}
     const simular = async () => {
       setCarregandoSim(true)
       try {

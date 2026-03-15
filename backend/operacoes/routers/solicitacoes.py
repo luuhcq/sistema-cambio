@@ -235,3 +235,18 @@ def rejeitar_solicitacao(request, solicitacao_id: int, payload: SolicitacaoRejei
     solicitacao.save()
 
     return 200, solicitacao
+
+
+@router.post("/{solicitacao_id}/visualizar", response={200: dict, 404: dict})
+def marcar_visualizada(request, solicitacao_id: int):
+    solicitacao = SolicitacaoEdicao.objects.filter(
+        id=solicitacao_id, solicitado_por=request.user
+    ).first()
+    if not solicitacao:
+        return 404, {"detail": "Solicitação não encontrada."}
+
+    if not solicitacao.visualizada_em:
+        solicitacao.visualizada_em = timezone.now()
+        solicitacao.save()
+
+    return 200, {"detail": "Marcada como visualizada."}

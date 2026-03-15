@@ -24,9 +24,10 @@ def calcular_indicadores(operacoes):
             "por_moeda": [],
             "por_modalidade": [],
             "top_clientes": [],
+            "ranking_operacoes": [],
         }
 
-    lista = list(operacoes.select_related("cliente", "moeda", "parceiro"))
+    lista = list(operacoes.select_related("cliente", "moeda", "parceiro", "criado_por"))
 
     volume = sum(op.vet for op in lista)
     receita_bruta = sum(op.comissao_bruta for op in lista)
@@ -103,6 +104,33 @@ def calcular_indicadores(operacoes):
         reverse=True,
     )[:10]
 
+    # Ranking de operadores
+    operadores = {}
+    for op in lista:
+        nome = op.criado_por.get_full_name() or op.criado_por.username
+        if nome not in operadores:
+            operadores[nome] = {
+                "volume": Decimal("0"),
+                "receita": Decimal("0"),
+                "count": 0,
+            }
+        operadores[nome]["volume"] += op.vet
+        operadores[nome]["receita"] += op.comissao_liquida
+        operadores[nome]["count"] += 1
+    ranking_operadores = sorted(
+        [
+            {
+                "operador": k,
+                "volume": v["volume"],
+                "receita": v["receita"],
+                "boletas": v["count"],
+            }
+            for k, v in operadores.items()
+        ],
+        key=lambda x: x["volume"],
+        reverse=True,
+    )
+
     return {
         "volume_operado": volume,
         "receita_bruta": receita_bruta,
@@ -115,6 +143,8 @@ def calcular_indicadores(operacoes):
         "por_moeda": por_moeda,
         "por_modalidade": por_modalidade,
         "top_clientes": top_clientes,
+        "receita_media_por_operacao": receita_media,
+        "ranking_operadores": ranking_operadores,
     }
 
 
@@ -131,8 +161,15 @@ def indicadores(
     hoje = date.today()
 
     if periodo == "custom" and data_inicio and data_fim:
-        inicio = date.fromisoformat(data_inicio)
-        fim = date.fromisoformat(data_fim)
+        try:
+            inicio = date.fromisoformat(data_inicio)
+            fim = date.fromisoformat(data_fim)
+            if inicio.year < 2000 or fim.year < 2000:
+                inicio = hoje.replace(day=1)
+                fim = hoje
+        except (ValueError, Exception):
+            inicio = hoje.replace(day=1)
+            fim = hoje
     elif periodo == "diario":
         inicio = hoje
         fim = hoje
@@ -168,3 +205,23 @@ def indicadores(
         operacoes = operacoes.filter(criado_por=request.user)
 
     return calcular_indicadores(operacoes)
+
+
+@router.get("/pendencias", response=dict)
+def pendencias(request):
+    from operacoes.models import SolicitacaoEdicao
+
+    rascunhos = Operacao.objects.filter(
+        criado_por=request.user, status="RASCUNHO"
+    ).count()
+
+    solicitacoes_respondidas = SolicitacaoEdicao.objects.filter(
+        solicitado_por=request.user,
+        status__in=["APROVADA", "REJEITADA"],
+        visualizada_em__isnull=True,
+    ).count()
+
+    return {
+        "rascunhos_pendentes": rascunhos,
+        "solicitacoes_respondidas": solicitacoes_respondidas,
+    }

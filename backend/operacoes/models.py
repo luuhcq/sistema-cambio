@@ -515,6 +515,9 @@ class SolicitacaoEdicao(models.Model):
     )
     respondido_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    visualizada_em = models.DateTimeField(
+        null=True, blank=True, verbose_name="Visualizada em"
+    )
 
     class Meta:
         ordering = ["-criado_em"]

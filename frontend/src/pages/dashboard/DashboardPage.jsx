@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useDashboard } from '../../hooks/useDashboard'
 import { useAuth } from '../../context/AuthContext'
+import { usePendencias } from '../../hooks/usePendencias'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import api from '../../api/axios'
 
@@ -35,9 +36,13 @@ export default function DashboardPage() {
   const [periodo, setPeriodo] = useState('mensal')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dataInicioAplicada, setDataInicioAplicada] = useState('')
+  const [dataFimAplicada, setDataFimAplicada] = useState('')
   const [escopo, setEscopo] = useState('minhas')
 
-  const { data, isLoading } = useDashboard(periodo, dataInicio, dataFim, escopo)
+  const { data, isLoading } = useDashboard(periodo, dataInicioAplicada, dataFimAplicada, escopo)
+
+  const { data: pendencias } = usePendencias()
 
   const baixarRelatorio = async (formato, tipo) => {
     try {
@@ -94,6 +99,13 @@ export default function DashboardPage() {
               <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
               <span className="text-gray-400 text-sm">a</span>
               <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
+              <button
+                onClick={() => { setDataInicioAplicada(dataInicio); setDataFimAplicada(dataFim) }}
+                disabled={!dataInicio || !dataFim}
+                className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                Aplicar
+              </button>
             </div>
           )}
         </div>
@@ -105,7 +117,33 @@ export default function DashboardPage() {
         <Card titulo="Receita Líquida" valor={formatBRL(data?.receita_liquida || 0)} subtitulo="Após dedução de 5% de imposto" />
         <Card titulo="Total de Boletas" valor={data?.total_boletas || 0} />
         <Card titulo="Ticket Médio" valor={formatBRL(data?.ticket_medio || 0)} />
-        <Card titulo="Spread Médio Ponderado" valor={`${Number(data?.spread_medio || 0).toFixed(4)}%`} />
+        <Card titulo="Spread Médio Ponderado" valor={`${Number(data?.spread_medio || 0).toFixed(4).replace('.', ',')}%`} />
+        <Card titulo="Receita Média por Operação" valor={formatBRL(data?.receita_media_por_operacao || 0)} />
+
+        {/* Pendências inline (operador) */}
+        {!isGestor &&  (
+          <div className={`col-span-2 rounded-xl p-5 flex flex-col justify-center gap-2 ${
+            pendencias && (pendencias.rascunhos_pendentes > 0 || pendencias.solicitacoes_respondidas > 0)
+              ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+              : 'bg-white dark:bg-gray-900 shadow'
+          }`}>
+            {pendencias.rascunhos_pendentes > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.rascunhos_pendentes}</span>
+                <span className="text-sm text-amber-800 dark:text-amber-400">Boleta(s) em rascunho aguardando submissão</span>
+              </div>
+            )}
+            {pendencias.solicitacoes_respondidas > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.solicitacoes_respondidas}</span>
+                <span className="text-sm text-amber-800 dark:text-amber-400">Solicitação(ões) com resposta do gestor.</span>
+              </div>
+            )}
+            {(!pendencias || (pendencias.rascunhos_pendentes === 0 && pendencias.solicitacoes_respondidas === 0)) && (
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Sem pendências restantes.</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-8">
@@ -152,7 +190,42 @@ export default function DashboardPage() {
             ))}
           </tbody>
         </table>
-      </div>
     </div>
+
+        {/* Ranking de Operadores (só gestor) */}
+      {isGestor && escopo === 'geral' &&    (
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden mt-8">
+          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Ranking de Operadores</h2>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">#</th>
+                <th className="px-4 py-3 text-left text-gray-600 dark:text-gray-400 font-medium">Operador</th>
+                <th className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 font-medium">Boletas</th>
+                <th className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 font-medium">Volume</th>
+                <th className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 font-medium">Receita</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {(!data?.ranking_operadores || data.ranking_operadores.length === 0) && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Sem dados no período</td></tr>
+              )}
+              {data?.ranking_operadores?.map((o, i) => (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-white">{o.operador}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{o.boletas}</td>
+                  <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{formatBRL(o.volume)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{formatBRL(o.receita)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      </div>
   )
 }
+
