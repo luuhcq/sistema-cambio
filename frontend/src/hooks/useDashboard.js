@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '../api/axios'
 
-export function useDashboard(periodo = 'mensal', dataInicio = null, dataFim = null) {
+export function useDashboard(periodo = 'mensal', dataInicio = null, dataFim = null, escopo = 'minhas') {
   return useQuery({
-    queryKey: ['dashboard', periodo, dataInicio, dataFim],
+    queryKey: ['dashboard', periodo, dataInicio, dataFim, escopo],
     queryFn: () => {
-      const params = { periodo }
+      const params = { periodo, escopo }
       if (periodo === 'custom' && dataInicio && dataFim) {
         params.data_inicio = dataInicio
         params.data_fim = dataFim

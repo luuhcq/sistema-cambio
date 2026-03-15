@@ -120,8 +120,14 @@ def calcular_indicadores(operacoes):
 
 @router.get("/indicadores", response=dict)
 def indicadores(
-    request, periodo: str = "mensal", data_inicio: str = None, data_fim: str = None
+    request,
+    periodo: str = "mensal",
+    data_inicio: str = None,
+    data_fim: str = None,
+    escopo: str = "minhas",
 ):
+    from operacoes.permissions import is_gestor
+
     hoje = date.today()
 
     if periodo == "custom" and data_inicio and data_fim:
@@ -152,5 +158,13 @@ def indicadores(
         data__gte=inicio,
         data__lte=fim,
     )
+
+    # Filtro por escopo
+    if is_gestor(request.user):
+        if escopo == "minhas":
+            operacoes = operacoes.filter(criado_por=request.user)
+        # escopo == 'geral' → não filtra
+    else:
+        operacoes = operacoes.filter(criado_por=request.user)
 
     return calcular_indicadores(operacoes)

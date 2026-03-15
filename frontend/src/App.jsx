@@ -7,6 +7,7 @@ import DashboardPage from './pages/dashboard/DashboardPage'
 import BoletasPage from './pages/boletas/BoletasPage'
 import ClientesPage from './pages/clientes/ClientesPage'
 import ConfiguracoesPage from './pages/configuracoes/ConfiguracoesPage'
+import SolicitacoesPage from './pages/solicitacoes/SolicitacoesPage'
 
 const queryClient = new QueryClient()
 
@@ -47,6 +48,7 @@ function AppRoutes() {
         <Route path="/boletas" element={<BoletasPage />} />
         <Route path="/clientes" element={<ClientesPage />} />
         <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+        <Route path="/solicitacoes" element={<SolicitacoesPage />} />
       </Route>
     </Routes>
   )

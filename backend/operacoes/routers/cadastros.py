@@ -2,6 +2,7 @@ from ninja import Router
 from operacoes.models import Moeda, Parceiro, Cliente, IOFConfig
 from operacoes.schemas import MoedaOut, ParceiroOut, ClienteOut, ClienteIn
 from operacoes.auth import JWTAuth
+from django.contrib.auth import get_user_model
 
 router = Router(tags=["Cadastros"], auth=JWTAuth())
 
@@ -52,3 +53,23 @@ def criar_cliente(request, payload: ClienteIn):
         return 201, cliente
     except Exception as e:
         return 400, {"detail": str(e)}
+
+
+@router.get("/operadores", response=list[dict])
+def listar_operadores(request):
+    from operacoes.permissions import is_gestor
+
+    if not is_gestor(request.user):
+        return []
+
+    User = get_user_model()
+    users = User.objects.filter(is_active=True).values(
+        "id", "username", "first_name", "last_name"
+    )
+    return [
+        {
+            "id": u["id"],
+            "nome": f"{u['first_name']} {u['last_name']}".strip() or u["username"],
+        }
+        for u in users
+    ]

@@ -243,6 +243,15 @@ class SimulacaoOut(Schema):
 class SolicitacaoEdicaoIn(Schema):
     operacao_id: int
     justificativa: str
+    dados_propostos: dict
+
+
+class SolicitacaoAprovarIn(Schema):
+    acao: str  # 'confirmar', 'manter_pendente'
+
+
+class SolicitacaoRejeitarIn(Schema):
+    comentario: str
 
 
 class SolicitacaoEdicaoOut(Schema):
@@ -250,7 +259,11 @@ class SolicitacaoEdicaoOut(Schema):
     operacao_id: int
     solicitado_por: UserOut
     justificativa: str
+    dados_propostos: dict
+    dados_originais: dict
     status: str
+    status_original_boleta: str
     respondido_por: UserOut | None = None
+    comentario_gestor: str | None = None
     respondido_em: datetime | None = None
     criado_em: datetime

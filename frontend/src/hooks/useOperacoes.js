@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../api/axios'
 
-export function useOperacoes(page = 1, pageSize = 50) {
+export function useOperacoes(page = 1, pageSize = 50, escopo = 'minhas', operadorId = null) {
   return useQuery({
-    queryKey: ['operacoes', page, pageSize],
-    queryFn: () => api.get('/operacoes/', { params: { page, page_size: pageSize } }).then((r) => r.data),
+    queryKey: ['operacoes', page, pageSize, escopo, operadorId],
+    queryFn: () => {
+      const params = { page, page_size: pageSize, escopo }
+      if (operadorId) params.operador_id = operadorId
+      return api.get('/operacoes/', { params }).then((r) => r.data)
+    },
   })
 }
 

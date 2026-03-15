@@ -497,13 +497,21 @@ class SolicitacaoEdicao(models.Model):
         related_name="solicitacoes_edicao",
     )
     justificativa = models.TextField(verbose_name="Justificativa")
+    dados_propostos = models.JSONField(verbose_name="Valores propostos", default=dict)
+    dados_originais = models.JSONField(verbose_name="Valores originais", default=dict)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDENTE")
+    status_original_boleta = models.CharField(
+        max_length=10, verbose_name="Status original da boleta", default=""
+    )
     respondido_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="respostas_edicao",
+    )
+    comentario_gestor = models.TextField(
+        null=True, blank=True, verbose_name="Comentário do Gestor"
     )
     respondido_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)

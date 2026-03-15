@@ -19,7 +19,7 @@ export function useCriarSolicitacao() {
 export function useAprovarSolicitacao() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id) => api.post(`/solicitacoes/${id}/aprovar`).then((r) => r.data),
+    mutationFn: ({ id, acao }) => api.post(`/solicitacoes/${id}/aprovar`, { acao }).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] })
       queryClient.invalidateQueries({ queryKey: ['operacoes'] })
@@ -30,7 +30,7 @@ export function useAprovarSolicitacao() {
 export function useRejeitarSolicitacao() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id) => api.post(`/solicitacoes/${id}/rejeitar`).then((r) => r.data),
+    mutationFn: ({ id, comentario }) => api.post(`/solicitacoes/${id}/rejeitar`, { comentario }).then((r) => r.data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['solicitacoes'] }),
   })
 }

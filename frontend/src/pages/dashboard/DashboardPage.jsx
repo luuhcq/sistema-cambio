@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDashboard } from '../../hooks/useDashboard'
+import { useAuth } from '../../context/AuthContext'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import api from '../../api/axios'
 
@@ -28,199 +29,107 @@ function Card({ titulo, valor, subtitulo }) {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth()
+  const isGestor = user?.perfil === 'Gestor'
+
   const [periodo, setPeriodo] = useState('mensal')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
-  const { data, isLoading } = useDashboard(periodo, dataInicio, dataFim)
+  const [escopo, setEscopo] = useState('minhas')
+
+  const { data, isLoading } = useDashboard(periodo, dataInicio, dataFim, escopo)
 
   const baixarRelatorio = async (formato, tipo) => {
     try {
       const hoje = new Date()
-      const params = {
-        ano: hoje.getFullYear(),
-        mes: hoje.getMonth() + 1,
-        dia: hoje.getDate(),
-      }
-
+      const params = { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1, dia: hoje.getDate() }
       const url = `/relatorios/${formato}/${tipo}?ano=${params.ano}&mes=${params.mes}&dia=${params.dia}`
       const response = await api.get(url, { responseType: 'blob' })
-
       const blob = new Blob([response.data])
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
       link.download = `fechamento_${tipo}_${hoje.toISOString().split('T')[0]}.${formato}`
       link.click()
       URL.revokeObjectURL(link.href)
-    } catch {
-      alert('Erro ao gerar relatório.')
-    }
+    } catch { alert('Erro ao gerar relatório.') }
   }
 
-  if (isLoading) {
-    return <p className="text-gray-500">Carregando...</p>
-  }
+  if (isLoading) return <p className="text-gray-500">Carregando...</p>
 
-  const parceiroData = data?.por_parceiro?.map((p) => ({
-    name: p.parceiro,
-    receita: Number(p.receita),
-  })) || []
-
-  const moedaData = data?.por_moeda?.map((m) => ({
-    name: m.moeda,
-    value: Number(m.volume),
-  })) || []
+  const parceiroData = data?.por_parceiro?.map((p) => ({ name: p.parceiro, receita: Number(p.receita) })) || []
+  const moedaData = data?.por_moeda?.map((m) => ({ name: m.moeda, value: Number(m.volume) })) || []
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          {isGestor && (
+            <div className="flex gap-1">
+              <button onClick={() => setEscopo('minhas')} className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${escopo === 'minhas' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Meu</button>
+              <button onClick={() => setEscopo('geral')} className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${escopo === 'geral' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Geral</button>
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => baixarRelatorio('csv', 'diario')}
-              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-            >
-              CSV Diário
-            </button>
-            <button
-              onClick={() => baixarRelatorio('csv', 'mensal')}
-              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-            >
-              CSV Mensal
-            </button>
-            <button
-              onClick={() => baixarRelatorio('pdf', 'diario')}
-              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-            >
-              PDF Diário
-            </button>
-            <button
-              onClick={() => baixarRelatorio('pdf', 'mensal')}
-              className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-            >
-              PDF Mensal
-            </button>
-          </div>
+          {isGestor && (
+            <div className="flex gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
+              <button onClick={() => baixarRelatorio('csv', 'diario')} className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">CSV Diário</button>
+              <button onClick={() => baixarRelatorio('csv', 'mensal')} className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">CSV Mensal</button>
+              <button onClick={() => baixarRelatorio('pdf', 'diario')} className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">PDF Diário</button>
+              <button onClick={() => baixarRelatorio('pdf', 'mensal')} className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">PDF Mensal</button>
+            </div>
+          )}
 
           <div className="flex gap-2">
             {PERIODOS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPeriodo(p.id)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  periodo === p.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-              >
-                {p.label}
-              </button>
+              <button key={p.id} onClick={() => setPeriodo(p.id)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${periodo === p.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'}`}>{p.label}</button>
             ))}
-            <button
-              onClick={() => setPeriodo('custom')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                periodo === 'custom'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-              }`}
-            >
-              Customizado
-            </button>
+            <button onClick={() => setPeriodo('custom')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${periodo === 'custom' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'}`}>Customizado</button>
           </div>
 
           {periodo === 'custom' && (
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-              />
+              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
               <span className="text-gray-400 text-sm">a</span>
-              <input
-                type="date"
-                value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-              />
+              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Cards de indicadores */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <Card titulo="Volume Operado" valor={formatBRL(data?.volume_operado || 0)} />
         <Card titulo="Receita Bruta" valor={formatBRL(data?.receita_bruta || 0)} />
-        <Card
-          titulo="Receita Líquida"
-          valor={formatBRL(data?.receita_liquida || 0)}
-          subtitulo="Após dedução de 5% de imposto"
-        />
+        <Card titulo="Receita Líquida" valor={formatBRL(data?.receita_liquida || 0)} subtitulo="Após dedução de 5% de imposto" />
         <Card titulo="Total de Boletas" valor={data?.total_boletas || 0} />
         <Card titulo="Ticket Médio" valor={formatBRL(data?.ticket_medio || 0)} />
-        <Card
-          titulo="Spread Médio Ponderado"
-          valor={`${Number(data?.spread_medio || 0).toFixed(4)}%`}
-        />
+        <Card titulo="Spread Médio Ponderado" valor={`${Number(data?.spread_medio || 0).toFixed(4)}%`} />
       </div>
 
-      {/* Gráficos */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-5">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-            Receita por Parceiro
-          </h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Receita por Parceiro</h2>
           {parceiroData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={parceiroData}>
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => formatBRL(v)} />
-                <Bar dataKey="receita" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
+              <BarChart data={parceiroData}><XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 12 }} /><Tooltip formatter={(v) => formatBRL(v)} /><Bar dataKey="receita" fill="#3b82f6" radius={[4, 4, 0, 0]} /></BarChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>
-          )}
+          ) : (<p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>)}
         </div>
-
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-5">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-            Volume por Moeda
-          </h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Volume por Moeda</h2>
           {moedaData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={moedaData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {moedaData.map((_, i) => (
-                    <Cell key={i} fill={CORES[i % CORES.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => formatBRL(v)} />
-              </PieChart>
+              <PieChart><Pie data={moedaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>{moedaData.map((_, i) => (<Cell key={i} fill={CORES[i % CORES.length]} />))}</Pie><Tooltip formatter={(v) => formatBRL(v)} /></PieChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>
-          )}
+          ) : (<p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>)}
         </div>
       </div>
 
-      {/* Top Clientes */}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Top Clientes (Curva ABC)
-          </h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Top Clientes (Curva ABC)</h2>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">
@@ -232,23 +141,13 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {(!data?.top_clientes || data.top_clientes.length === 0) && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
-                  Sem dados no período
-                </td>
-              </tr>
-            )}
+            {(!data?.top_clientes || data.top_clientes.length === 0) && (<tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Sem dados no período</td></tr>)}
             {data?.top_clientes?.map((c, i) => (
               <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{c.cliente}</td>
-                <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                  {formatBRL(c.volume)}
-                </td>
-                <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                  {formatBRL(c.receita)}
-                </td>
+                <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{formatBRL(c.volume)}</td>
+                <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{formatBRL(c.receita)}</td>
               </tr>
             ))}
           </tbody>

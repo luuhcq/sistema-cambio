@@ -163,8 +163,26 @@ def simular_operacao(request, payload: SimulacaoIn):
 
 
 @router.get("/", response=dict)
-def listar_operacoes(request, page: int = 1, page_size: int = 50):
+def listar_operacoes(
+    request,
+    page: int = 1,
+    page_size: int = 50,
+    escopo: str = "minhas",
+    operador_id: int = None,
+):
+    from operacoes.permissions import is_gestor
+
     qs = Operacao.objects.select_related("cliente", "moeda", "parceiro").all()
+
+    if is_gestor(request.user):
+        if escopo == "minhas":
+            qs = qs.filter(criado_por=request.user)
+        elif escopo == "operador" and operador_id:
+            qs = qs.filter(criado_por_id=operador_id)
+        # escopo == 'todas' → não filtra
+    else:
+        # Operador sempre vê só as próprias
+        qs = qs.filter(criado_por=request.user)
 
     total = qs.count()
     inicio = (page - 1) * page_size
@@ -173,8 +191,7 @@ def listar_operacoes(request, page: int = 1, page_size: int = 50):
 
     from operacoes.schemas import OperacaoOut
 
-    schema = OperacaoOut
-    items = [schema.from_orm(op) for op in operacoes]
+    items = [OperacaoOut.from_orm(op) for op in operacoes]
 
     return {
         "items": items,
