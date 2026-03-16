@@ -120,48 +120,153 @@ export default function DashboardPage() {
         <Card titulo="Spread Médio Ponderado" valor={`${Number(data?.spread_medio || 0).toFixed(4).replace('.', ',')}%`} />
         <Card titulo="Receita Média por Operação" valor={formatBRL(data?.receita_media_por_operacao || 0)} />
 
-        {/* Pendências inline (operador) */}
-        {!isGestor &&  (
-          <div className={`col-span-2 rounded-xl p-5 flex flex-col justify-center gap-2 ${
-            pendencias && (pendencias.rascunhos_pendentes > 0 || pendencias.solicitacoes_respondidas > 0)
-              ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
-              : 'bg-white dark:bg-gray-900 shadow'
-          }`}>
-            {pendencias.rascunhos_pendentes > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.rascunhos_pendentes}</span>
-                <span className="text-sm text-amber-800 dark:text-amber-400">Boleta(s) em rascunho aguardando submissão</span>
-              </div>
-            )}
-            {pendencias.solicitacoes_respondidas > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.solicitacoes_respondidas}</span>
-                <span className="text-sm text-amber-800 dark:text-amber-400">Solicitação(ões) com resposta do gestor.</span>
-              </div>
-            )}
-            {(!pendencias || (pendencias.rascunhos_pendentes === 0 && pendencias.solicitacoes_respondidas === 0)) && (
+        {/* Pendências inline */}
+        {pendencias && (() => {
+          const temPendencia = isGestor
+            ? (pendencias.rascunhos_pendentes > 0 || pendencias.pendentes_aprovacao > 0 || pendencias.solicitacoes_edicao_pendentes > 0)
+            : (pendencias.rascunhos_pendentes > 0 || pendencias.solicitacoes_respondidas > 0)
+
+          return (
+            <div className={`col-span-2 rounded-xl p-5 flex flex-col justify-center gap-2 ${
+              temPendencia
+                ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+                : 'bg-white dark:bg-gray-900 shadow'
+            }`}>
+              {temPendencia ? (
+                <>
+                  {pendencias.rascunhos_pendentes > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.rascunhos_pendentes}</span>
+                      <span className="text-sm text-amber-800 dark:text-amber-400">Boleta(s) em rascunho aguardando submissão</span>
+                    </div>
+                  )}
+                  {isGestor && pendencias.pendentes_aprovacao > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.pendentes_aprovacao}</span>
+                      <span className="text-sm text-amber-800 dark:text-amber-400">Boleta(s) pendente(s) de aprovação</span>
+                    </div>
+                  )}
+                  {isGestor && pendencias.solicitacoes_edicao_pendentes > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.solicitacoes_edicao_pendentes}</span>
+                      <span className="text-sm text-amber-800 dark:text-amber-400">Solicitação(ões) de edição pendente(s)</span>
+                    </div>
+                  )}
+                  {!isGestor && pendencias.solicitacoes_respondidas > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">{pendencias.solicitacoes_respondidas}</span>
+                      <span className="text-sm text-amber-800 dark:text-amber-400">Solicitação(ões) com resposta do gestor</span>
+                    </div>
+                  )}
+                </>
+              ) : (
                 <p className="text-sm font-bold text-gray-900 dark:text-white">Sem pendências restantes.</p>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-8">
+        {/* Receita por Parceiro */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-5">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Receita por Parceiro</h2>
           {parceiroData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={parceiroData}><XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 12 }} /><Tooltip formatter={(v) => formatBRL(v)} /><Bar dataKey="receita" fill="#3b82f6" radius={[4, 4, 0, 0]} /></BarChart>
+              <BarChart data={parceiroData} barCategoryGap="20%">
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.4} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: 'var(--color-text-secondary, #9ca3af)' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'var(--color-text-secondary, #9ca3af)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
+                />
+                <Tooltip
+                  formatter={(v) => [`Receita: ${formatBRL(v)}`]}
+                  separator=""
+                  contentStyle={{
+                    backgroundColor: 'rgba(17,24,39,0.95)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '12px',
+                  }}
+                  cursor={{ fill: 'rgba(244, 244, 244, 0.02)' }}
+                />
+                <Bar dataKey="receita" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
-          ) : (<p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>)}
+          ) : (
+            <p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>
+          )}
         </div>
+
+        {/* Volume por Moeda */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-5">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Volume por Moeda</h2>
           {moedaData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart><Pie data={moedaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>{moedaData.map((_, i) => (<Cell key={i} fill={CORES[i % CORES.length]} />))}</Pie><Tooltip formatter={(v) => formatBRL(v)} /></PieChart>
-            </ResponsiveContainer>
-          ) : (<p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>)}
+            <div className="flex items-center justify-center gap-8">
+              <div style={{ width: 200, height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={moedaData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      strokeWidth={2}
+                      stroke="var(--color-background-primary, #fff)"
+                    >
+                      {moedaData.map((_, i) => (
+                        <Cell key={i} fill={CORES[i % CORES.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v) => formatBRL(v)}
+                      contentStyle={{
+                        backgroundColor: 'rgba(17,24,39,0.95)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '12px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-col gap-3">
+                {moedaData.map((m, i) => {
+                  const total = moedaData.reduce((acc, cur) => acc + cur.value, 0)
+                  const pct = total > 0 ? ((m.value / total) * 100).toFixed(0) : 0
+                  return (
+                    <div key={m.name} className="flex items-center gap-2">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: CORES[i % CORES.length] }}
+                      />
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{m.name}</span>
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{pct}%</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm py-8 text-center">Sem dados no período</p>
+          )}
         </div>
       </div>
 

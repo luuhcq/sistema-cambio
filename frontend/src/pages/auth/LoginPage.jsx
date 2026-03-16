@@ -18,8 +18,8 @@ export default function LoginPage() {
     try {
       await login(username, password)
       navigate('/')
-    } catch {
-      setError('Credenciais inválidas.')
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao fazer login.')
     } finally {
       setLoading(false)
     }

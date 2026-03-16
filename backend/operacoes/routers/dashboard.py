@@ -210,18 +210,33 @@ def indicadores(
 @router.get("/pendencias", response=dict)
 def pendencias(request):
     from operacoes.models import SolicitacaoEdicao
+    from operacoes.permissions import is_gestor
 
-    rascunhos = Operacao.objects.filter(
-        criado_por=request.user, status="RASCUNHO"
-    ).count()
+    if is_gestor(request.user):
+        pendentes_aprovacao = Operacao.objects.filter(status="PENDENTE").count()
+        solicitacoes_pendentes = SolicitacaoEdicao.objects.filter(
+            status="PENDENTE"
+        ).count()
+        rascunhos = Operacao.objects.filter(
+            criado_por=request.user, status="RASCUNHO"
+        ).count()
 
-    solicitacoes_respondidas = SolicitacaoEdicao.objects.filter(
-        solicitado_por=request.user,
-        status__in=["APROVADA", "REJEITADA"],
-        visualizada_em__isnull=True,
-    ).count()
+        return {
+            "rascunhos_pendentes": rascunhos,
+            "pendentes_aprovacao": pendentes_aprovacao,
+            "solicitacoes_edicao_pendentes": solicitacoes_pendentes,
+        }
+    else:
+        rascunhos = Operacao.objects.filter(
+            criado_por=request.user, status="RASCUNHO"
+        ).count()
+        solicitacoes_respondidas = SolicitacaoEdicao.objects.filter(
+            solicitado_por=request.user,
+            status__in=["APROVADA", "REJEITADA"],
+            visualizada_em__isnull=True,
+        ).count()
 
-    return {
-        "rascunhos_pendentes": rascunhos,
-        "solicitacoes_respondidas": solicitacoes_respondidas,
-    }
+        return {
+            "rascunhos_pendentes": rascunhos,
+            "solicitacoes_respondidas": solicitacoes_respondidas,
+        }

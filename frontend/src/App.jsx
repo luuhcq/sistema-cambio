@@ -8,6 +8,7 @@ import BoletasPage from './pages/boletas/BoletasPage'
 import ClientesPage from './pages/clientes/ClientesPage'
 import ConfiguracoesPage from './pages/configuracoes/ConfiguracoesPage'
 import SolicitacoesPage from './pages/solicitacoes/SolicitacoesPage'
+import UsuariosPage from './pages/usuarios/UsuariosPage'
 
 const queryClient = new QueryClient()
 
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="/clientes" element={<ClientesPage />} />
         <Route path="/configuracoes" element={<ConfiguracoesPage />} />
         <Route path="/solicitacoes" element={<SolicitacoesPage />} />
+        <Route path="/usuarios" element={<UsuariosPage />} />
       </Route>
     </Routes>
   )

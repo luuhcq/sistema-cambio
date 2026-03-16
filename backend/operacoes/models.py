@@ -526,3 +526,19 @@ class SolicitacaoEdicao(models.Model):
 
     def __str__(self):
         return f"Solicitação #{self.id} | Boleta #{self.operacao.id} | {self.status}"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
+    )
+    deve_trocar_senha = models.BooleanField(
+        default=False, verbose_name="Deve trocar senha"
+    )
+
+    class Meta:
+        verbose_name = "Perfil de Usuário"
+        verbose_name_plural = "Perfis de Usuário"
+
+    def __str__(self):
+        return f"Perfil de {self.user.username}"

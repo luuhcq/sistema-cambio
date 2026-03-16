@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useSolicitacoes } from '../hooks/useSolicitacoes'
+import TrocarSenhaModal from '../components/TrocarSenhaModal'
 
 export default function MainLayout() {
   const { user, logout } = useAuth()
@@ -15,6 +16,7 @@ export default function MainLayout() {
     { to: '/boletas', label: 'Boletas' },
     { to: '/clientes', label: 'Clientes' },
     { to: '/solicitacoes', label: isGestor ? 'Solicitações' : 'Minhas Solicitações', badge: pendentes },
+    ...(isGestor ? [{ to: '/usuarios', label: 'Usuários' }] : []),
     ...(isGestor ? [{ to: '/configuracoes', label: 'Configurações' }] : []),
   ]
 
@@ -24,7 +26,7 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
+    <div className="h-screen flex bg-gray-50 dark:bg-gray-950 overflow-hidden">
       <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -75,6 +77,8 @@ export default function MainLayout() {
       <main className="flex-1 p-8 overflow-auto">
         <Outlet />
       </main>
+
+      {user?.deve_trocar_senha && <TrocarSenhaModal />}
     </div>
   )
 }
