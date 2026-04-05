@@ -1,7 +1,7 @@
 # operacoes/models.py
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.conf import settings
 from simple_history.models import HistoricalRecords
 
 
@@ -66,9 +66,7 @@ class Cliente(models.Model):
 
     cpf_cnpj = models.CharField(max_length=14, unique=True, verbose_name="CPF/CNPJ")
     nome = models.CharField(max_length=200, verbose_name="Nome / Razão Social")
-    tipo = models.CharField(
-        max_length=2, choices=TIPO_CHOICES, editable=False, verbose_name="Tipo"
-    )
+    tipo = models.CharField(max_length=2, choices=TIPO_CHOICES, editable=False, verbose_name="Tipo")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
 
     class Meta:
@@ -83,9 +81,7 @@ class Cliente(models.Model):
         elif len(doc) == 14 and not validar_cnpj(doc):
             raise ValidationError({"cpf_cnpj": "CNPJ inválido."})
         elif len(doc) not in (11, 14):
-            raise ValidationError(
-                {"cpf_cnpj": "Documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos."}
-            )
+            raise ValidationError({"cpf_cnpj": "Documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos."})
 
     def save(self, *args, **kwargs):
         self.cpf_cnpj = self.cpf_cnpj.replace(".", "").replace("-", "").replace("/", "")
@@ -128,18 +124,12 @@ class TarifaConfig(models.Model):
         ("USD", "Dólar"),
     ]
 
-    parceiro = models.ForeignKey(
-        Parceiro, on_delete=models.PROTECT, related_name="tarifas"
-    )
+    parceiro = models.ForeignKey(Parceiro, on_delete=models.PROTECT, related_name="tarifas")
     tipo_pessoa = models.CharField(
         max_length=5, choices=TIPO_PESSOA_CHOICES, verbose_name="Tipo Pessoa"
     )
-    caminho = models.CharField(
-        max_length=7, choices=CAMINHO_CHOICES, verbose_name="Caminho"
-    )
-    valor = models.DecimalField(
-        max_digits=15, decimal_places=2, verbose_name="Valor da Tarifa"
-    )
+    caminho = models.CharField(max_length=7, choices=CAMINHO_CHOICES, verbose_name="Caminho")
+    valor = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Valor da Tarifa")
     moeda_tarifa = models.CharField(
         max_length=3, choices=MOEDA_TARIFA_CHOICES, verbose_name="Moeda da Tarifa"
     )
@@ -150,16 +140,12 @@ class TarifaConfig(models.Model):
         verbose_name_plural = "Configurações de Tarifa"
 
     def __str__(self):
-        return f"{self.parceiro} | {self.tipo_pessoa} | {self.caminho} | {self.valor} {self.moeda_tarifa}"
+        return f"{self.parceiro} | {self.tipo_pessoa} | {self.caminho} | {self.valor} {self.moeda_tarifa}"  # noqa: E501
 
 
 class ComissaoConfig(models.Model):
-    parceiro = models.OneToOneField(
-        Parceiro, on_delete=models.PROTECT, related_name="comissao"
-    )
-    fator = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name="Fator de Comissão"
-    )
+    parceiro = models.OneToOneField(Parceiro, on_delete=models.PROTECT, related_name="comissao")
+    fator = models.DecimalField(max_digits=4, decimal_places=2, verbose_name="Fator de Comissão")
 
     class Meta:
         verbose_name = "Configuração de Comissão"
@@ -176,12 +162,8 @@ class IOFConfig(models.Model):
     ]
 
     modalidade = models.CharField(max_length=100, verbose_name="Modalidade")
-    caminho = models.CharField(
-        max_length=7, choices=CAMINHO_CHOICES, verbose_name="Caminho"
-    )
-    aliquota = models.DecimalField(
-        max_digits=5, decimal_places=4, verbose_name="Alíquota IOF"
-    )
+    caminho = models.CharField(max_length=7, choices=CAMINHO_CHOICES, verbose_name="Caminho")
+    aliquota = models.DecimalField(max_digits=5, decimal_places=4, verbose_name="Alíquota IOF")
 
     class Meta:
         unique_together = ["modalidade", "caminho"]
@@ -207,20 +189,12 @@ class Operacao(models.Model):
 
     # Dados da operação
     data = models.DateField(verbose_name="Data da Operação")
-    cliente = models.ForeignKey(
-        Cliente, on_delete=models.PROTECT, related_name="operacoes"
-    )
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="operacoes")
     moeda = models.ForeignKey(Moeda, on_delete=models.PROTECT, related_name="operacoes")
-    montante = models.DecimalField(
-        max_digits=15, decimal_places=2, verbose_name="Montante ME"
-    )
-    parceiro = models.ForeignKey(
-        Parceiro, on_delete=models.PROTECT, related_name="operacoes"
-    )
+    montante = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Montante ME")
+    parceiro = models.ForeignKey(Parceiro, on_delete=models.PROTECT, related_name="operacoes")
     modalidade = models.CharField(max_length=100, verbose_name="Modalidade")
-    caminho = models.CharField(
-        max_length=7, choices=CAMINHO_CHOICES, verbose_name="Caminho"
-    )
+    caminho = models.CharField(max_length=7, choices=CAMINHO_CHOICES, verbose_name="Caminho")
 
     # Isenções
     isencao_iof = models.BooleanField(default=False, verbose_name="Isento de IOF")
@@ -243,9 +217,7 @@ class Operacao(models.Model):
         max_digits=18, decimal_places=6, null=True, blank=True, verbose_name="PTAX D-1"
     )
     spot = models.DecimalField(max_digits=18, decimal_places=6, verbose_name="Spot")
-    taxa_cliente = models.DecimalField(
-        max_digits=18, decimal_places=6, verbose_name="Taxa Cliente"
-    )
+    taxa_cliente = models.DecimalField(max_digits=18, decimal_places=6, verbose_name="Taxa Cliente")
 
     # Informativo
     indicacao = models.CharField(
@@ -295,9 +267,7 @@ class Operacao(models.Model):
             return Decimal("0")
 
         # Busca configuração exata
-        config = IOFConfig.objects.filter(
-            modalidade=self.modalidade, caminho=self.caminho
-        ).first()
+        config = IOFConfig.objects.filter(modalidade=self.modalidade, caminho=self.caminho).first()
 
         # Fallback: "Demais modalidades"
         if not config:
@@ -310,7 +280,7 @@ class Operacao(models.Model):
     @property
     def iof_nominal(self):
         """Montante × Alíquota IOF × Taxa do Cliente."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         valor = self.montante * self.aliquota_iof * self.taxa_cliente
         return valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -352,7 +322,7 @@ class Operacao(models.Model):
     @property
     def tarifa_nominal(self):
         """Converte a tarifa para BRL conforme regras do Blueprint."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         if self.tarifa_negociada:
             valor = self.tarifa_negociada
@@ -377,7 +347,7 @@ class Operacao(models.Model):
     @property
     def valor_base_brl(self):
         """Montante × Taxa do Cliente."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         valor = self.montante * self.taxa_cliente
         return valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -393,7 +363,7 @@ class Operacao(models.Model):
     @property
     def spread(self):
         """Spread percentual absoluto."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         if not self.spot or self.spot == Decimal("0"):
             return Decimal("0")
@@ -404,7 +374,7 @@ class Operacao(models.Model):
     @property
     def spread_com_sinal(self):
         """Spread com sinal: negativo quando a mesa perde dinheiro."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         if not self.spot or self.spot == Decimal("0"):
             return Decimal("0")
@@ -419,7 +389,7 @@ class Operacao(models.Model):
     @property
     def comissao_bruta(self):
         """Spot × Spread(decimal) × Montante × Fator do Parceiro."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         config = ComissaoConfig.objects.filter(parceiro=self.parceiro).first()
         if not config:
@@ -432,7 +402,7 @@ class Operacao(models.Model):
     @property
     def comissao_liquida(self):
         """Comissão Bruta × 0.95 (dedução de 5% de imposto)."""
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         valor = self.comissao_bruta * Decimal("0.95")
         return valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -458,9 +428,7 @@ class LogExclusaoBoleta(models.Model):
         on_delete=models.PROTECT,
         related_name="exclusoes_boleta",
     )
-    excluido_em = models.DateTimeField(
-        auto_now_add=True, verbose_name="Data da Exclusão"
-    )
+    excluido_em = models.DateTimeField(auto_now_add=True, verbose_name="Data da Exclusão")
     justificativa = models.TextField(verbose_name="Justificativa")
 
     class Meta:
@@ -510,14 +478,10 @@ class SolicitacaoEdicao(models.Model):
         blank=True,
         related_name="respostas_edicao",
     )
-    comentario_gestor = models.TextField(
-        null=True, blank=True, verbose_name="Comentário do Gestor"
-    )
+    comentario_gestor = models.TextField(null=True, blank=True, verbose_name="Comentário do Gestor")
     respondido_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
-    visualizada_em = models.DateTimeField(
-        null=True, blank=True, verbose_name="Visualizada em"
-    )
+    visualizada_em = models.DateTimeField(null=True, blank=True, verbose_name="Visualizada em")
 
     class Meta:
         ordering = ["-criado_em"]
@@ -532,9 +496,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
-    deve_trocar_senha = models.BooleanField(
-        default=False, verbose_name="Deve trocar senha"
-    )
+    deve_trocar_senha = models.BooleanField(default=False, verbose_name="Deve trocar senha")
 
     class Meta:
         verbose_name = "Perfil de Usuário"

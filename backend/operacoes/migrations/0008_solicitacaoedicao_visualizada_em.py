@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('operacoes', '0007_solicitacaoedicao_comentario_gestor_and_more'),
+        ("operacoes", "0007_solicitacaoedicao_comentario_gestor_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='solicitacaoedicao',
-            name='visualizada_em',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='Visualizada em'),
+            model_name="solicitacaoedicao",
+            name="visualizada_em",
+            field=models.DateTimeField(blank=True, null=True, verbose_name="Visualizada em"),
         ),
     ]

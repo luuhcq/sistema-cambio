@@ -1,12 +1,12 @@
 from ninja import NinjaAPI
+
 from operacoes.auth import JWTAuth
-from operacoes.schemas import UserOut
 from operacoes.routers.auth import router as auth_router
 from operacoes.routers.cadastros import router as cadastros_router
-from operacoes.routers.operacoes import router as operacoes_router
-from operacoes.routers.ptax import router as ptax_router
 from operacoes.routers.configuracoes import router as config_router
 from operacoes.routers.dashboard import router as dashboard_router
+from operacoes.routers.operacoes import router as operacoes_router
+from operacoes.routers.ptax import router as ptax_router
 from operacoes.routers.relatorios import router as relatorios_router
 from operacoes.routers.solicitacoes import router as solicitacoes_router
 from operacoes.routers.usuarios import router as usuarios_router
@@ -40,6 +40,5 @@ def me(request):
         "first_name": user.first_name,
         "last_name": user.last_name,
         "perfil": get_perfil(user),
-        "deve_trocar_senha": hasattr(user, "profile")
-        and user.profile.deve_trocar_senha,
+        "deve_trocar_senha": hasattr(user, "profile") and user.profile.deve_trocar_senha,
     }

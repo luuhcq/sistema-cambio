@@ -4,30 +4,31 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('operacoes', '0006_add_unaccent_extension'),
+        ("operacoes", "0006_add_unaccent_extension"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='solicitacaoedicao',
-            name='comentario_gestor',
-            field=models.TextField(blank=True, null=True, verbose_name='Comentário do Gestor'),
+            model_name="solicitacaoedicao",
+            name="comentario_gestor",
+            field=models.TextField(blank=True, null=True, verbose_name="Comentário do Gestor"),
         ),
         migrations.AddField(
-            model_name='solicitacaoedicao',
-            name='dados_originais',
-            field=models.JSONField(default=dict, verbose_name='Valores originais'),
+            model_name="solicitacaoedicao",
+            name="dados_originais",
+            field=models.JSONField(default=dict, verbose_name="Valores originais"),
         ),
         migrations.AddField(
-            model_name='solicitacaoedicao',
-            name='dados_propostos',
-            field=models.JSONField(default=dict, verbose_name='Valores propostos'),
+            model_name="solicitacaoedicao",
+            name="dados_propostos",
+            field=models.JSONField(default=dict, verbose_name="Valores propostos"),
         ),
         migrations.AddField(
-            model_name='solicitacaoedicao',
-            name='status_original_boleta',
-            field=models.CharField(default='', max_length=10, verbose_name='Status original da boleta'),
+            model_name="solicitacaoedicao",
+            name="status_original_boleta",
+            field=models.CharField(
+                default="", max_length=10, verbose_name="Status original da boleta"
+            ),
         ),
     ]

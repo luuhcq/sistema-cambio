@@ -1,15 +1,16 @@
-from ninja import Router
 from django.utils import timezone
+from ninja import Router
+
+from operacoes.auth import JWTAuth
+from operacoes.hmac_utils import gerar_hmac
 from operacoes.models import Operacao, SolicitacaoEdicao
+from operacoes.permissions import is_gestor, pode_criar_boleta
 from operacoes.schemas import (
+    SolicitacaoAprovarIn,
     SolicitacaoEdicaoIn,
     SolicitacaoEdicaoOut,
-    SolicitacaoAprovarIn,
     SolicitacaoRejeitarIn,
 )
-from operacoes.auth import JWTAuth
-from operacoes.permissions import is_gestor, pode_criar_boleta
-from operacoes.hmac_utils import gerar_hmac
 
 router = Router(tags=["Solicitações de Edição"], auth=JWTAuth())
 
@@ -51,9 +52,7 @@ def snapshot_boleta(operacao):
         "ptax": str(operacao.ptax) if operacao.ptax else None,
         "isencao_iof": operacao.isencao_iof,
         "isencao_tarifa": operacao.isencao_tarifa,
-        "tarifa_negociada": (
-            str(operacao.tarifa_negociada) if operacao.tarifa_negociada else None
-        ),
+        "tarifa_negociada": (str(operacao.tarifa_negociada) if operacao.tarifa_negociada else None),
         "moeda_tarifa_negociada": operacao.moeda_tarifa_negociada,
         "indicacao": operacao.indicacao,
     }
@@ -62,12 +61,10 @@ def snapshot_boleta(operacao):
 @router.get("/", response=list[SolicitacaoEdicaoOut])
 def listar_solicitacoes(request):
     if is_gestor(request.user):
-        return SolicitacaoEdicao.objects.select_related(
-            "solicitado_por", "respondido_por"
-        ).all()
-    return SolicitacaoEdicao.objects.select_related(
-        "solicitado_por", "respondido_por"
-    ).filter(solicitado_por=request.user)
+        return SolicitacaoEdicao.objects.select_related("solicitado_por", "respondido_por").all()
+    return SolicitacaoEdicao.objects.select_related("solicitado_por", "respondido_por").filter(
+        solicitado_por=request.user
+    )
 
 
 @router.post("/", response={201: SolicitacaoEdicaoOut, 400: dict, 403: dict, 404: dict})
@@ -91,9 +88,7 @@ def solicitar_edicao(request, payload: SolicitacaoEdicaoIn):
     if not payload.justificativa or len(payload.justificativa.strip()) < 10:
         return 400, {"detail": "Justificativa deve ter no mínimo 10 caracteres."}
 
-    pendente = SolicitacaoEdicao.objects.filter(
-        operacao=operacao, status="PENDENTE"
-    ).exists()
+    pendente = SolicitacaoEdicao.objects.filter(operacao=operacao, status="PENDENTE").exists()
     if pendente:
         return 400, {"detail": "Já existe uma solicitação pendente para esta boleta."}
 
@@ -107,9 +102,7 @@ def solicitar_edicao(request, payload: SolicitacaoEdicaoIn):
                 if payload.dados_propostos[campo] is not None
                 else None
             )
-            val_original = (
-                str(originais[campo]) if originais[campo] is not None else None
-            )
+            val_original = str(originais[campo]) if originais[campo] is not None else None
             if val_proposto != val_original:
                 alterados[campo] = payload.dados_propostos[campo]
 
@@ -160,6 +153,7 @@ def aprovar_solicitacao(request, solicitacao_id: int, payload: SolicitacaoAprova
 
     # Aplica as alterações na boleta
     from django.shortcuts import get_object_or_404
+
     from operacoes.models import Cliente, Moeda, Parceiro
 
     for campo, valor in solicitacao.dados_propostos.items():
@@ -193,7 +187,8 @@ def aprovar_solicitacao(request, solicitacao_id: int, payload: SolicitacaoAprova
         operacao.hash_integridade = ""
 
     campos_alterados = ", ".join(solicitacao.dados_propostos.keys())
-    razao = f"Edição aprovada por {request.user.get_full_name() or request.user.username}. Campos: {campos_alterados}"
+    nome = request.user.get_full_name() or request.user.username
+    razao = f"Edição aprovada por {nome}. Campos: {campos_alterados}"
     operacao._change_reason = razao[:100]
     operacao.save()
 

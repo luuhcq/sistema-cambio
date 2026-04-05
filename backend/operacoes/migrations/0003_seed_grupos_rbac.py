@@ -14,7 +14,6 @@ def reverter(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("operacoes", "0002_seed_dados_iniciais"),
     ]

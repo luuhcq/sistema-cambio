@@ -1,6 +1,7 @@
-from ninja import Schema
 from datetime import date, datetime
 from decimal import Decimal
+
+from ninja import Schema
 
 
 # --- Auth ---

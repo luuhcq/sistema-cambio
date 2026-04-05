@@ -1,8 +1,10 @@
-from ninja import Router
-from operacoes.auth import JWTAuth
-import requests
 from datetime import date, timedelta
 from decimal import Decimal
+
+import requests
+from ninja import Router
+
+from operacoes.auth import JWTAuth
 
 router = Router(tags=["PTAX"], auth=JWTAuth())
 

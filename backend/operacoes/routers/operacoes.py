@@ -1,35 +1,35 @@
-from ninja import Router
-from django.shortcuts import get_object_or_404
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
-from operacoes.models import (
-    Operacao,
-    Cliente,
-    Moeda,
-    Parceiro,
-    LogExclusaoBoleta,
-    IOFConfig,
-    TarifaConfig,
-    ComissaoConfig,
-)
-from operacoes.schemas import (
-    OperacaoIn,
-    OperacaoOut,
-    CancelarIn,
-    ExcluirIn,
-    SimulacaoIn,
-)
+from django.shortcuts import get_object_or_404
+from ninja import Router
+
 from operacoes.auth import JWTAuth
 from operacoes.hmac_utils import gerar_hmac, verificar_hmac
+from operacoes.models import (
+    Cliente,
+    ComissaoConfig,
+    IOFConfig,
+    LogExclusaoBoleta,
+    Moeda,
+    Operacao,
+    Parceiro,
+    TarifaConfig,
+)
 from operacoes.permissions import (
-    pode_criar_boleta,
-    pode_editar_boleta,
-    pode_submeter_boleta,
+    fora_horario_comercial,
     pode_aprovar,
     pode_cancelar,
+    pode_criar_boleta,
+    pode_editar_boleta,
     pode_excluir,
-    is_auditor,
-    fora_horario_comercial,
+    pode_submeter_boleta,
+)
+from operacoes.schemas import (
+    CancelarIn,
+    ExcluirIn,
+    OperacaoIn,
+    OperacaoOut,
+    SimulacaoIn,
 )
 
 router = Router(tags=["Operações"], auth=JWTAuth())
@@ -99,9 +99,7 @@ def simular_operacao(request, payload: SimulacaoIn):
                     tarifa_nominal = valor_tarifa * payload.taxa_cliente
                 else:
                     tarifa_nominal = valor_tarifa * (payload.ptax or Decimal("0"))
-            tarifa_nominal = tarifa_nominal.quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
+            tarifa_nominal = tarifa_nominal.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         # --- VET ---
         valor_base = (payload.montante * payload.taxa_cliente).quantize(
@@ -118,12 +116,9 @@ def simular_operacao(request, payload: SimulacaoIn):
         spread_negativo = False
         if payload.spot and payload.spot != Decimal("0"):
             spread = (
-                abs((payload.taxa_cliente - payload.spot) / payload.spot)
-                * Decimal("100")
+                abs((payload.taxa_cliente - payload.spot) / payload.spot) * Decimal("100")
             ).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            sinal = ((payload.taxa_cliente - payload.spot) / payload.spot) * Decimal(
-                "100"
-            )
+            sinal = ((payload.taxa_cliente - payload.spot) / payload.spot) * Decimal("100")
             if payload.caminho == "ENTRADA":
                 sinal = -sinal
             spread_com_sinal = sinal.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
@@ -156,10 +151,8 @@ def simular_operacao(request, payload: SimulacaoIn):
             "comissao_liquida": str(comissao_liquida),
             "spread_negativo": spread_negativo,
         }
-    except Exception as e:
-        return 400, {
-            "detail": "Erro ao calcular simulação. Verifique os dados informados."
-        }
+    except Exception:
+        return 400, {"detail": "Erro ao calcular simulação. Verifique os dados informados."}
 
 
 @router.get("/", response=dict)
@@ -250,20 +243,16 @@ def criar_operacao(request, payload: OperacaoIn):
             status="RASCUNHO",
             criado_por=request.user,
             registro_fora_horario=is_fora,
-            comentario_fora_horario=(
-                payload.comentario_fora_horario if is_fora else None
-            ),
+            comentario_fora_horario=(payload.comentario_fora_horario if is_fora else None),
         )
         operacao.save()
         return 201, operacao
 
-    except Exception as e:
+    except Exception:
         return 400, {"detail": "Erro ao criar boleta. Verifique os dados informados."}
 
 
-@router.put(
-    "/{operacao_id}", response={200: OperacaoOut, 400: dict, 403: dict, 404: dict}
-)
+@router.put("/{operacao_id}", response={200: OperacaoOut, 400: dict, 403: dict, 404: dict})
 def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
     operacao = Operacao.objects.filter(id=operacao_id).first()
     if not operacao:
@@ -297,9 +286,7 @@ def editar_operacao(request, operacao_id: int, payload: OperacaoIn):
     if is_fora:
         operacao.comentario_fora_horario = payload.comentario_fora_horario
 
-    operacao._change_reason = (
-        f"Editada por {request.user.get_full_name() or request.user.username}"
-    )
+    operacao._change_reason = f"Editada por {request.user.get_full_name() or request.user.username}"
     operacao.save()
     return 200, operacao
 
@@ -380,7 +367,8 @@ def cancelar_operacao(request, operacao_id: int, payload: CancelarIn):
         return 400, {"detail": "Operação já está cancelada."}
 
     operacao.status = "CANCELADA"
-    operacao._change_reason = f"Cancelada por {request.user.get_full_name() or request.user.username}. Motivo: {payload.justificativa}"
+    nome = request.user.get_full_name() or request.user.username
+    operacao._change_reason = f"Cancelada por {nome}. Motivo: {payload.justificativa}"
     operacao.save()
     return 200, operacao
 
@@ -400,9 +388,7 @@ def excluir_operacao(request, operacao_id: int, payload: ExcluirIn):
         return 403, {"detail": "Apenas gestores podem excluir operações."}
 
     if operacao.status != "CANCELADA":
-        return 400, {
-            "detail": "A boleta deve ser cancelada antes de ser excluída fisicamente."
-        }
+        return 400, {"detail": "A boleta deve ser cancelada antes de ser excluída fisicamente."}
 
     if not payload.justificativa or len(payload.justificativa.strip()) < 10:
         return 400, {"detail": "Justificativa deve ter no mínimo 10 caracteres."}

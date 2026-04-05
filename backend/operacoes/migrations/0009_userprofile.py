@@ -6,23 +6,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('operacoes', '0008_solicitacaoedicao_visualizada_em'),
+        ("operacoes", "0008_solicitacaoedicao_visualizada_em"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('deve_trocar_senha', models.BooleanField(default=False, verbose_name='Deve trocar senha')),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "deve_trocar_senha",
+                    models.BooleanField(default=False, verbose_name="Deve trocar senha"),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="profile",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Perfil de Usuário',
-                'verbose_name_plural': 'Perfis de Usuário',
+                "verbose_name": "Perfil de Usuário",
+                "verbose_name_plural": "Perfis de Usuário",
             },
         ),
     ]

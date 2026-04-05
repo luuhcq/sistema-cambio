@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('operacoes', '0009_userprofile'),
+        ("operacoes", "0009_userprofile"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='historicaloperacao',
-            name='observacao',
-            field=models.TextField(blank=True, null=True, verbose_name='Observação'),
+            model_name="historicaloperacao",
+            name="observacao",
+            field=models.TextField(blank=True, null=True, verbose_name="Observação"),
         ),
         migrations.AddField(
-            model_name='operacao',
-            name='observacao',
-            field=models.TextField(blank=True, null=True, verbose_name='Observação'),
+            model_name="operacao",
+            name="observacao",
+            field=models.TextField(blank=True, null=True, verbose_name="Observação"),
         ),
     ]

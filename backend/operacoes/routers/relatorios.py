@@ -1,18 +1,16 @@
 import csv
-import io
 from datetime import date, timedelta
-from decimal import Decimal
 
 from django.http import HttpResponse
 from ninja import Router
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from operacoes.models import Operacao
 from operacoes.auth import JWTAuth
+from operacoes.models import Operacao
 
 router = Router(tags=["Relatórios"], auth=JWTAuth())
 
@@ -27,14 +25,10 @@ def _get_operacoes(tipo, data_ref=None):
     elif tipo == "mensal":
         inicio = data_ref.replace(day=1)
         if data_ref.month == 12:
-            fim = data_ref.replace(year=data_ref.year + 1, month=1, day=1) - timedelta(
-                days=1
-            )
+            fim = data_ref.replace(year=data_ref.year + 1, month=1, day=1) - timedelta(days=1)
         else:
             fim = data_ref.replace(month=data_ref.month + 1, day=1) - timedelta(days=1)
-        qs = Operacao.objects.filter(
-            status="CONFIRMADA", data__gte=inicio, data__lte=fim
-        )
+        qs = Operacao.objects.filter(status="CONFIRMADA", data__gte=inicio, data__lte=fim)
     else:
         qs = Operacao.objects.filter(status="CONFIRMADA")
 
@@ -179,7 +173,8 @@ def exportar_pdf(request, tipo: str, ano: int = None, mes: int = None, dia: int 
     if tipo == "diario":
         subtitulo = f"Fechamento Diário — {titulo_periodo}"
     else:
-        subtitulo = f'Fechamento Mensal — {titulo_periodo.strftime("%m/%Y") if data_ref else date.today().strftime("%m/%Y")}'
+        mes_ano = titulo_periodo.strftime("%m/%Y") if data_ref else date.today().strftime("%m/%Y")
+        subtitulo = f"Fechamento Mensal — {mes_ano}"
 
     titulo_style = ParagraphStyle(
         "TituloRelatorio",
@@ -192,9 +187,7 @@ def exportar_pdf(request, tipo: str, ano: int = None, mes: int = None, dia: int 
     elements.append(Spacer(1, 5 * mm))
 
     if not linhas:
-        elements.append(
-            Paragraph("Nenhuma operação confirmada no período.", styles["Normal"])
-        )
+        elements.append(Paragraph("Nenhuma operação confirmada no período.", styles["Normal"]))
     else:
         # Totais
         total_vet = sum(op.vet for op in operacoes)

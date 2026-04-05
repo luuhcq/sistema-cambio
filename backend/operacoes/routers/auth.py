@@ -1,10 +1,9 @@
-from ninja import Router
 from django.contrib.auth import authenticate
+from ninja import Router, Schema
 from rest_framework_simplejwt.tokens import RefreshToken
-from ninja import Schema
-from operacoes.auth import JWTAuth
 
-from operacoes.schemas import LoginIn, TokenOut, UserOut
+from operacoes.auth import JWTAuth
+from operacoes.schemas import LoginIn, TokenOut
 
 router = Router(tags=["Auth"])
 

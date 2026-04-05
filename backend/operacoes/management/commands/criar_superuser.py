@@ -1,7 +1,8 @@
-from django.core.management.base import BaseCommand
+import os
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-import os
+from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
@@ -14,15 +15,11 @@ class Command(BaseCommand):
         password = os.getenv("SUPERUSER_PASSWORD")
 
         if not password:
-            self.stdout.write(
-                self.style.WARNING("SUPERUSER_PASSWORD não definida. Pulando.")
-            )
+            self.stdout.write(self.style.WARNING("SUPERUSER_PASSWORD não definida. Pulando."))
             return
 
         if User.objects.filter(username=username).exists():
-            self.stdout.write(
-                self.style.WARNING(f"Usuário {username} já existe. Pulando.")
-            )
+            self.stdout.write(self.style.WARNING(f"Usuário {username} já existe. Pulando."))
             return
 
         user = User.objects.create_superuser(
@@ -36,6 +33,4 @@ class Command(BaseCommand):
         if gestor:
             user.groups.add(gestor)
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Superuser {username} criado com sucesso.")
-        )
+        self.stdout.write(self.style.SUCCESS(f"Superuser {username} criado com sucesso."))

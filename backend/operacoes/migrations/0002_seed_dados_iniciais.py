@@ -62,9 +62,7 @@ def seed_dados_iniciais(apps, schema_editor):
         ("Demais modalidades", "ENTRADA", "0.0038"),
     ]
     for modalidade, caminho, aliquota in iofs:
-        IOFConfig.objects.create(
-            modalidade=modalidade, caminho=caminho, aliquota=aliquota
-        )
+        IOFConfig.objects.create(modalidade=modalidade, caminho=caminho, aliquota=aliquota)
 
     # --- TarifaConfig ---
     tarifas = [
@@ -108,7 +106,6 @@ def reverter(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("operacoes", "0001_initial"),
     ]

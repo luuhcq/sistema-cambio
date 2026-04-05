@@ -1,7 +1,9 @@
-from ninja import Router, Schema
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from ninja import Router, Schema
+
 from operacoes.auth import JWTAuth
+from operacoes.models import UserProfile
 from operacoes.permissions import is_gestor
 
 router = Router(tags=["Usuários"], auth=JWTAuth())
@@ -74,8 +76,7 @@ def listar_usuarios(request):
                 "last_name": u.last_name,
                 "is_active": u.is_active,
                 "perfil": get_perfil(u) or "Sem perfil",
-                "deve_trocar_senha": hasattr(u, "profile")
-                and u.profile.deve_trocar_senha,
+                "deve_trocar_senha": hasattr(u, "profile") and u.profile.deve_trocar_senha,
             }
         )
     return resultado
@@ -137,9 +138,7 @@ def alternar_status(request, user_id: int):
     return 200, {"detail": f"Usuário {status}.", "is_active": user.is_active}
 
 
-@router.post(
-    "/{user_id}/alterar-perfil", response={200: dict, 400: dict, 403: dict, 404: dict}
-)
+@router.post("/{user_id}/alterar-perfil", response={200: dict, 400: dict, 403: dict, 404: dict})
 def alterar_perfil(request, user_id: int, payload: AlterarPerfilIn):
     if not is_gestor(request.user):
         return 403, {"detail": "Apenas gestores podem alterar perfis."}
@@ -160,9 +159,7 @@ def alterar_perfil(request, user_id: int, payload: AlterarPerfilIn):
     return 200, {"detail": f"Perfil alterado para {payload.perfil}."}
 
 
-@router.post(
-    "/{user_id}/resetar-senha", response={200: dict, 400: dict, 403: dict, 404: dict}
-)
+@router.post("/{user_id}/resetar-senha", response={200: dict, 400: dict, 403: dict, 404: dict})
 def resetar_senha(request, user_id: int, payload: ResetarSenhaIn):
     if not is_gestor(request.user):
         return 403, {"detail": "Apenas gestores podem resetar senhas."}
@@ -183,7 +180,3 @@ def resetar_senha(request, user_id: int, payload: ResetarSenhaIn):
         user.profile.save()
 
     return 200, {"detail": "Senha resetada. Usuário deverá trocar no próximo login."}
-
-
-# Import necessário no topo do arquivo
-from operacoes.models import UserProfile

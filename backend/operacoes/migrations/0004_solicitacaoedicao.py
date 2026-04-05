@@ -6,29 +6,67 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('operacoes', '0003_seed_grupos_rbac'),
+        ("operacoes", "0003_seed_grupos_rbac"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SolicitacaoEdicao',
+            name="SolicitacaoEdicao",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('justificativa', models.TextField(verbose_name='Justificativa')),
-                ('status', models.CharField(choices=[('PENDENTE', 'Pendente'), ('APROVADA', 'Aprovada'), ('REJEITADA', 'Rejeitada')], default='PENDENTE', max_length=10)),
-                ('respondido_em', models.DateTimeField(blank=True, null=True)),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('operacao', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='solicitacoes_edicao', to='operacoes.operacao')),
-                ('respondido_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='respostas_edicao', to=settings.AUTH_USER_MODEL)),
-                ('solicitado_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='solicitacoes_edicao', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("justificativa", models.TextField(verbose_name="Justificativa")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDENTE", "Pendente"),
+                            ("APROVADA", "Aprovada"),
+                            ("REJEITADA", "Rejeitada"),
+                        ],
+                        default="PENDENTE",
+                        max_length=10,
+                    ),
+                ),
+                ("respondido_em", models.DateTimeField(blank=True, null=True)),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                (
+                    "operacao",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="solicitacoes_edicao",
+                        to="operacoes.operacao",
+                    ),
+                ),
+                (
+                    "respondido_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="respostas_edicao",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "solicitado_por",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="solicitacoes_edicao",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Solicitação de Edição',
-                'verbose_name_plural': 'Solicitações de Edição',
-                'ordering': ['-criado_em'],
+                "verbose_name": "Solicitação de Edição",
+                "verbose_name_plural": "Solicitações de Edição",
+                "ordering": ["-criado_em"],
             },
         ),
     ]

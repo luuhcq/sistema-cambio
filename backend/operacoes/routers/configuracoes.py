@@ -1,7 +1,8 @@
 from ninja import Router
-from operacoes.models import TarifaConfig, ComissaoConfig, IOFConfig
-from operacoes.schemas import TarifaConfigOut, ComissaoConfigOut, IOFConfigOut
+
 from operacoes.auth import JWTAuth
+from operacoes.models import ComissaoConfig, IOFConfig, TarifaConfig
+from operacoes.schemas import ComissaoConfigOut, IOFConfigOut, TarifaConfigOut
 
 router = Router(tags=["Configurações"], auth=JWTAuth())
 

@@ -1,8 +1,9 @@
-from ninja import Router
-from operacoes.models import Moeda, Parceiro, Cliente, IOFConfig
-from operacoes.schemas import MoedaOut, ParceiroOut, ClienteOut, ClienteIn
-from operacoes.auth import JWTAuth
 from django.contrib.auth import get_user_model
+from ninja import Router
+
+from operacoes.auth import JWTAuth
+from operacoes.models import Cliente, IOFConfig, Moeda, Parceiro
+from operacoes.schemas import ClienteIn, ClienteOut, MoedaOut, ParceiroOut
 
 router = Router(tags=["Cadastros"], auth=JWTAuth())
 
@@ -63,9 +64,7 @@ def listar_operadores(request):
         return []
 
     User = get_user_model()
-    users = User.objects.filter(is_active=True).values(
-        "id", "username", "first_name", "last_name"
-    )
+    users = User.objects.filter(is_active=True).values("id", "username", "first_name", "last_name")
     return [
         {
             "id": u["id"],

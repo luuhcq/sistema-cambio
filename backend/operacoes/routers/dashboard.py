@@ -1,10 +1,10 @@
-from ninja import Router
-from django.db.models import Sum, Avg, Count, F, DecimalField
-from django.db.models.functions import Coalesce
-from decimal import Decimal
 from datetime import date, timedelta
-from operacoes.models import Operacao
+from decimal import Decimal
+
+from ninja import Router
+
 from operacoes.auth import JWTAuth
+from operacoes.models import Operacao
 
 router = Router(tags=["Dashboard"], auth=JWTAuth())
 
@@ -62,10 +62,7 @@ def calcular_indicadores(operacoes):
         moedas[codigo]["volume"] += op.vet
         moedas[codigo]["count"] += 1
     por_moeda = sorted(
-        [
-            {"moeda": k, "volume": v["volume"], "operacoes": v["count"]}
-            for k, v in moedas.items()
-        ],
+        [{"moeda": k, "volume": v["volume"], "operacoes": v["count"]} for k, v in moedas.items()],
         key=lambda x: x["volume"],
         reverse=True,
     )
@@ -143,7 +140,6 @@ def calcular_indicadores(operacoes):
         "por_moeda": por_moeda,
         "por_modalidade": por_modalidade,
         "top_clientes": top_clientes,
-        "receita_media_por_operacao": receita_media,
         "ranking_operadores": ranking_operadores,
     }
 
@@ -214,12 +210,8 @@ def pendencias(request):
 
     if is_gestor(request.user):
         pendentes_aprovacao = Operacao.objects.filter(status="PENDENTE").count()
-        solicitacoes_pendentes = SolicitacaoEdicao.objects.filter(
-            status="PENDENTE"
-        ).count()
-        rascunhos = Operacao.objects.filter(
-            criado_por=request.user, status="RASCUNHO"
-        ).count()
+        solicitacoes_pendentes = SolicitacaoEdicao.objects.filter(status="PENDENTE").count()
+        rascunhos = Operacao.objects.filter(criado_por=request.user, status="RASCUNHO").count()
 
         return {
             "rascunhos_pendentes": rascunhos,
@@ -227,9 +219,7 @@ def pendencias(request):
             "solicitacoes_edicao_pendentes": solicitacoes_pendentes,
         }
     else:
-        rascunhos = Operacao.objects.filter(
-            criado_por=request.user, status="RASCUNHO"
-        ).count()
+        rascunhos = Operacao.objects.filter(criado_por=request.user, status="RASCUNHO").count()
         solicitacoes_respondidas = SolicitacaoEdicao.objects.filter(
             solicitado_por=request.user,
             status__in=["APROVADA", "REJEITADA"],

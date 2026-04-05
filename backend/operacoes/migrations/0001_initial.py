@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -16,167 +15,507 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Cliente',
+            name="Cliente",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cpf_cnpj', models.CharField(max_length=14, unique=True, verbose_name='CPF/CNPJ')),
-                ('nome', models.CharField(max_length=200, verbose_name='Nome / Razão Social')),
-                ('tipo', models.CharField(choices=[('PF', 'Pessoa Física'), ('PJ', 'Pessoa Jurídica')], editable=False, max_length=2, verbose_name='Tipo')),
-                ('ativo', models.BooleanField(default=True, verbose_name='Ativo')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("cpf_cnpj", models.CharField(max_length=14, unique=True, verbose_name="CPF/CNPJ")),
+                ("nome", models.CharField(max_length=200, verbose_name="Nome / Razão Social")),
+                (
+                    "tipo",
+                    models.CharField(
+                        choices=[("PF", "Pessoa Física"), ("PJ", "Pessoa Jurídica")],
+                        editable=False,
+                        max_length=2,
+                        verbose_name="Tipo",
+                    ),
+                ),
+                ("ativo", models.BooleanField(default=True, verbose_name="Ativo")),
             ],
             options={
-                'verbose_name': 'Cliente',
-                'verbose_name_plural': 'Clientes',
-                'ordering': ['nome'],
+                "verbose_name": "Cliente",
+                "verbose_name_plural": "Clientes",
+                "ordering": ["nome"],
             },
         ),
         migrations.CreateModel(
-            name='Moeda',
+            name="Moeda",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('codigo_iso', models.CharField(max_length=3, unique=True, verbose_name='Código ISO')),
-                ('nome', models.CharField(max_length=100, verbose_name='Nome')),
-                ('requer_ptax', models.BooleanField(default=True, verbose_name='Requer PTAX')),
-                ('ativo', models.BooleanField(default=True, verbose_name='Ativo')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "codigo_iso",
+                    models.CharField(max_length=3, unique=True, verbose_name="Código ISO"),
+                ),
+                ("nome", models.CharField(max_length=100, verbose_name="Nome")),
+                ("requer_ptax", models.BooleanField(default=True, verbose_name="Requer PTAX")),
+                ("ativo", models.BooleanField(default=True, verbose_name="Ativo")),
             ],
             options={
-                'verbose_name': 'Moeda',
-                'verbose_name_plural': 'Moedas',
-                'ordering': ['codigo_iso'],
+                "verbose_name": "Moeda",
+                "verbose_name_plural": "Moedas",
+                "ordering": ["codigo_iso"],
             },
         ),
         migrations.CreateModel(
-            name='Parceiro',
+            name="Parceiro",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nome', models.CharField(max_length=200, unique=True, verbose_name='Nome')),
-                ('ativo', models.BooleanField(default=True, verbose_name='Ativo')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("nome", models.CharField(max_length=200, unique=True, verbose_name="Nome")),
+                ("ativo", models.BooleanField(default=True, verbose_name="Ativo")),
             ],
             options={
-                'verbose_name': 'Parceiro',
-                'verbose_name_plural': 'Parceiros',
-                'ordering': ['nome'],
+                "verbose_name": "Parceiro",
+                "verbose_name_plural": "Parceiros",
+                "ordering": ["nome"],
             },
         ),
         migrations.CreateModel(
-            name='IOFConfig',
+            name="IOFConfig",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('modalidade', models.CharField(max_length=100, verbose_name='Modalidade')),
-                ('caminho', models.CharField(choices=[('ENTRADA', 'Entrada'), ('SAIDA', 'Saída')], max_length=7, verbose_name='Caminho')),
-                ('aliquota', models.DecimalField(decimal_places=4, max_digits=5, verbose_name='Alíquota IOF')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("modalidade", models.CharField(max_length=100, verbose_name="Modalidade")),
+                (
+                    "caminho",
+                    models.CharField(
+                        choices=[("ENTRADA", "Entrada"), ("SAIDA", "Saída")],
+                        max_length=7,
+                        verbose_name="Caminho",
+                    ),
+                ),
+                (
+                    "aliquota",
+                    models.DecimalField(
+                        decimal_places=4, max_digits=5, verbose_name="Alíquota IOF"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Configuração de IOF',
-                'verbose_name_plural': 'Configurações de IOF',
-                'unique_together': {('modalidade', 'caminho')},
+                "verbose_name": "Configuração de IOF",
+                "verbose_name_plural": "Configurações de IOF",
+                "unique_together": {("modalidade", "caminho")},
             },
         ),
         migrations.CreateModel(
-            name='LogExclusaoBoleta',
+            name="LogExclusaoBoleta",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('dados_boleta', models.JSONField(verbose_name='Snapshot da Boleta')),
-                ('excluido_em', models.DateTimeField(auto_now_add=True, verbose_name='Data da Exclusão')),
-                ('justificativa', models.TextField(verbose_name='Justificativa')),
-                ('excluido_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='exclusoes_boleta', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("dados_boleta", models.JSONField(verbose_name="Snapshot da Boleta")),
+                (
+                    "excluido_em",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Data da Exclusão"),
+                ),
+                ("justificativa", models.TextField(verbose_name="Justificativa")),
+                (
+                    "excluido_por",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="exclusoes_boleta",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Log de Exclusão de Boleta',
-                'verbose_name_plural': 'Logs de Exclusão de Boleta',
+                "verbose_name": "Log de Exclusão de Boleta",
+                "verbose_name_plural": "Logs de Exclusão de Boleta",
             },
         ),
         migrations.CreateModel(
-            name='Operacao',
+            name="Operacao",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('data', models.DateField(verbose_name='Data da Operação')),
-                ('montante', models.DecimalField(decimal_places=2, max_digits=15, verbose_name='Montante ME')),
-                ('modalidade', models.CharField(max_length=100, verbose_name='Modalidade')),
-                ('caminho', models.CharField(choices=[('ENTRADA', 'Entrada'), ('SAIDA', 'Saída')], max_length=7, verbose_name='Caminho')),
-                ('isencao_iof', models.BooleanField(default=False, verbose_name='Isento de IOF')),
-                ('isencao_tarifa', models.BooleanField(default=False, verbose_name='Isento de Tarifa')),
-                ('tarifa_negociada', models.DecimalField(blank=True, decimal_places=2, max_digits=15, null=True, verbose_name='Tarifa Negociada')),
-                ('moeda_tarifa_negociada', models.CharField(blank=True, max_length=3, null=True, verbose_name='Moeda Tarifa Negociada')),
-                ('ptax', models.DecimalField(blank=True, decimal_places=6, max_digits=18, null=True, verbose_name='PTAX D-1')),
-                ('spot', models.DecimalField(decimal_places=6, max_digits=18, verbose_name='Spot')),
-                ('taxa_cliente', models.DecimalField(decimal_places=6, max_digits=18, verbose_name='Taxa Cliente')),
-                ('indicacao', models.CharField(blank=True, max_length=200, null=True, verbose_name='Indicação (Finder)')),
-                ('status', models.CharField(choices=[('RASCUNHO', 'Rascunho'), ('PENDENTE', 'Pendente'), ('CONFIRMADA', 'Confirmada'), ('CANCELADA', 'Cancelada')], default='RASCUNHO', max_length=10, verbose_name='Status')),
-                ('hash_integridade', models.CharField(blank=True, default='', max_length=64, verbose_name='Hash HMAC')),
-                ('cliente', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='operacoes', to='operacoes.cliente')),
-                ('criado_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='operacoes_criadas', to=settings.AUTH_USER_MODEL)),
-                ('moeda', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='operacoes', to='operacoes.moeda')),
-                ('parceiro', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='operacoes', to='operacoes.parceiro')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("data", models.DateField(verbose_name="Data da Operação")),
+                (
+                    "montante",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=15, verbose_name="Montante ME"
+                    ),
+                ),
+                ("modalidade", models.CharField(max_length=100, verbose_name="Modalidade")),
+                (
+                    "caminho",
+                    models.CharField(
+                        choices=[("ENTRADA", "Entrada"), ("SAIDA", "Saída")],
+                        max_length=7,
+                        verbose_name="Caminho",
+                    ),
+                ),
+                ("isencao_iof", models.BooleanField(default=False, verbose_name="Isento de IOF")),
+                (
+                    "isencao_tarifa",
+                    models.BooleanField(default=False, verbose_name="Isento de Tarifa"),
+                ),
+                (
+                    "tarifa_negociada",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        max_digits=15,
+                        null=True,
+                        verbose_name="Tarifa Negociada",
+                    ),
+                ),
+                (
+                    "moeda_tarifa_negociada",
+                    models.CharField(
+                        blank=True, max_length=3, null=True, verbose_name="Moeda Tarifa Negociada"
+                    ),
+                ),
+                (
+                    "ptax",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=6,
+                        max_digits=18,
+                        null=True,
+                        verbose_name="PTAX D-1",
+                    ),
+                ),
+                ("spot", models.DecimalField(decimal_places=6, max_digits=18, verbose_name="Spot")),
+                (
+                    "taxa_cliente",
+                    models.DecimalField(
+                        decimal_places=6, max_digits=18, verbose_name="Taxa Cliente"
+                    ),
+                ),
+                (
+                    "indicacao",
+                    models.CharField(
+                        blank=True, max_length=200, null=True, verbose_name="Indicação (Finder)"
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("RASCUNHO", "Rascunho"),
+                            ("PENDENTE", "Pendente"),
+                            ("CONFIRMADA", "Confirmada"),
+                            ("CANCELADA", "Cancelada"),
+                        ],
+                        default="RASCUNHO",
+                        max_length=10,
+                        verbose_name="Status",
+                    ),
+                ),
+                (
+                    "hash_integridade",
+                    models.CharField(
+                        blank=True, default="", max_length=64, verbose_name="Hash HMAC"
+                    ),
+                ),
+                (
+                    "cliente",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="operacoes",
+                        to="operacoes.cliente",
+                    ),
+                ),
+                (
+                    "criado_por",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="operacoes_criadas",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "moeda",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="operacoes",
+                        to="operacoes.moeda",
+                    ),
+                ),
+                (
+                    "parceiro",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="operacoes",
+                        to="operacoes.parceiro",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Operação',
-                'verbose_name_plural': 'Operações',
-                'ordering': ['-data', '-id'],
+                "verbose_name": "Operação",
+                "verbose_name_plural": "Operações",
+                "ordering": ["-data", "-id"],
             },
         ),
         migrations.CreateModel(
-            name='HistoricalOperacao',
+            name="HistoricalOperacao",
             fields=[
-                ('id', models.BigIntegerField(auto_created=True, blank=True, db_index=True, verbose_name='ID')),
-                ('data', models.DateField(verbose_name='Data da Operação')),
-                ('montante', models.DecimalField(decimal_places=2, max_digits=15, verbose_name='Montante ME')),
-                ('modalidade', models.CharField(max_length=100, verbose_name='Modalidade')),
-                ('caminho', models.CharField(choices=[('ENTRADA', 'Entrada'), ('SAIDA', 'Saída')], max_length=7, verbose_name='Caminho')),
-                ('isencao_iof', models.BooleanField(default=False, verbose_name='Isento de IOF')),
-                ('isencao_tarifa', models.BooleanField(default=False, verbose_name='Isento de Tarifa')),
-                ('tarifa_negociada', models.DecimalField(blank=True, decimal_places=2, max_digits=15, null=True, verbose_name='Tarifa Negociada')),
-                ('moeda_tarifa_negociada', models.CharField(blank=True, max_length=3, null=True, verbose_name='Moeda Tarifa Negociada')),
-                ('ptax', models.DecimalField(blank=True, decimal_places=6, max_digits=18, null=True, verbose_name='PTAX D-1')),
-                ('spot', models.DecimalField(decimal_places=6, max_digits=18, verbose_name='Spot')),
-                ('taxa_cliente', models.DecimalField(decimal_places=6, max_digits=18, verbose_name='Taxa Cliente')),
-                ('indicacao', models.CharField(blank=True, max_length=200, null=True, verbose_name='Indicação (Finder)')),
-                ('status', models.CharField(choices=[('RASCUNHO', 'Rascunho'), ('PENDENTE', 'Pendente'), ('CONFIRMADA', 'Confirmada'), ('CANCELADA', 'Cancelada')], default='RASCUNHO', max_length=10, verbose_name='Status')),
-                ('hash_integridade', models.CharField(blank=True, default='', max_length=64, verbose_name='Hash HMAC')),
-                ('history_id', models.AutoField(primary_key=True, serialize=False)),
-                ('history_date', models.DateTimeField(db_index=True)),
-                ('history_change_reason', models.CharField(max_length=100, null=True)),
-                ('history_type', models.CharField(choices=[('+', 'Created'), ('~', 'Changed'), ('-', 'Deleted')], max_length=1)),
-                ('cliente', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='operacoes.cliente')),
-                ('criado_por', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('history_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('moeda', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='operacoes.moeda')),
-                ('parceiro', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='operacoes.parceiro')),
+                (
+                    "id",
+                    models.BigIntegerField(
+                        auto_created=True, blank=True, db_index=True, verbose_name="ID"
+                    ),
+                ),
+                ("data", models.DateField(verbose_name="Data da Operação")),
+                (
+                    "montante",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=15, verbose_name="Montante ME"
+                    ),
+                ),
+                ("modalidade", models.CharField(max_length=100, verbose_name="Modalidade")),
+                (
+                    "caminho",
+                    models.CharField(
+                        choices=[("ENTRADA", "Entrada"), ("SAIDA", "Saída")],
+                        max_length=7,
+                        verbose_name="Caminho",
+                    ),
+                ),
+                ("isencao_iof", models.BooleanField(default=False, verbose_name="Isento de IOF")),
+                (
+                    "isencao_tarifa",
+                    models.BooleanField(default=False, verbose_name="Isento de Tarifa"),
+                ),
+                (
+                    "tarifa_negociada",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        max_digits=15,
+                        null=True,
+                        verbose_name="Tarifa Negociada",
+                    ),
+                ),
+                (
+                    "moeda_tarifa_negociada",
+                    models.CharField(
+                        blank=True, max_length=3, null=True, verbose_name="Moeda Tarifa Negociada"
+                    ),
+                ),
+                (
+                    "ptax",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=6,
+                        max_digits=18,
+                        null=True,
+                        verbose_name="PTAX D-1",
+                    ),
+                ),
+                ("spot", models.DecimalField(decimal_places=6, max_digits=18, verbose_name="Spot")),
+                (
+                    "taxa_cliente",
+                    models.DecimalField(
+                        decimal_places=6, max_digits=18, verbose_name="Taxa Cliente"
+                    ),
+                ),
+                (
+                    "indicacao",
+                    models.CharField(
+                        blank=True, max_length=200, null=True, verbose_name="Indicação (Finder)"
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("RASCUNHO", "Rascunho"),
+                            ("PENDENTE", "Pendente"),
+                            ("CONFIRMADA", "Confirmada"),
+                            ("CANCELADA", "Cancelada"),
+                        ],
+                        default="RASCUNHO",
+                        max_length=10,
+                        verbose_name="Status",
+                    ),
+                ),
+                (
+                    "hash_integridade",
+                    models.CharField(
+                        blank=True, default="", max_length=64, verbose_name="Hash HMAC"
+                    ),
+                ),
+                ("history_id", models.AutoField(primary_key=True, serialize=False)),
+                ("history_date", models.DateTimeField(db_index=True)),
+                ("history_change_reason", models.CharField(max_length=100, null=True)),
+                (
+                    "history_type",
+                    models.CharField(
+                        choices=[("+", "Created"), ("~", "Changed"), ("-", "Deleted")], max_length=1
+                    ),
+                ),
+                (
+                    "cliente",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="operacoes.cliente",
+                    ),
+                ),
+                (
+                    "criado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "history_user",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "moeda",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="operacoes.moeda",
+                    ),
+                ),
+                (
+                    "parceiro",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="operacoes.parceiro",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'historical Operação',
-                'verbose_name_plural': 'historical Operações',
-                'ordering': ('-history_date', '-history_id'),
-                'get_latest_by': ('history_date', 'history_id'),
+                "verbose_name": "historical Operação",
+                "verbose_name_plural": "historical Operações",
+                "ordering": ("-history_date", "-history_id"),
+                "get_latest_by": ("history_date", "history_id"),
             },
             bases=(simple_history.models.HistoricalChanges, models.Model),
         ),
         migrations.CreateModel(
-            name='ComissaoConfig',
+            name="ComissaoConfig",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('fator', models.DecimalField(decimal_places=2, max_digits=4, verbose_name='Fator de Comissão')),
-                ('parceiro', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='comissao', to='operacoes.parceiro')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "fator",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=4, verbose_name="Fator de Comissão"
+                    ),
+                ),
+                (
+                    "parceiro",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="comissao",
+                        to="operacoes.parceiro",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Configuração de Comissão',
-                'verbose_name_plural': 'Configurações de Comissão',
+                "verbose_name": "Configuração de Comissão",
+                "verbose_name_plural": "Configurações de Comissão",
             },
         ),
         migrations.CreateModel(
-            name='TarifaConfig',
+            name="TarifaConfig",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('tipo_pessoa', models.CharField(choices=[('PF', 'Pessoa Física'), ('PJ', 'Pessoa Jurídica'), ('AMBOS', 'Ambos')], max_length=5, verbose_name='Tipo Pessoa')),
-                ('caminho', models.CharField(choices=[('ENTRADA', 'Entrada'), ('SAIDA', 'Saída'), ('AMBOS', 'Ambos')], max_length=7, verbose_name='Caminho')),
-                ('valor', models.DecimalField(decimal_places=2, max_digits=15, verbose_name='Valor da Tarifa')),
-                ('moeda_tarifa', models.CharField(choices=[('BRL', 'Real'), ('USD', 'Dólar')], max_length=3, verbose_name='Moeda da Tarifa')),
-                ('parceiro', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='tarifas', to='operacoes.parceiro')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "tipo_pessoa",
+                    models.CharField(
+                        choices=[
+                            ("PF", "Pessoa Física"),
+                            ("PJ", "Pessoa Jurídica"),
+                            ("AMBOS", "Ambos"),
+                        ],
+                        max_length=5,
+                        verbose_name="Tipo Pessoa",
+                    ),
+                ),
+                (
+                    "caminho",
+                    models.CharField(
+                        choices=[("ENTRADA", "Entrada"), ("SAIDA", "Saída"), ("AMBOS", "Ambos")],
+                        max_length=7,
+                        verbose_name="Caminho",
+                    ),
+                ),
+                (
+                    "valor",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=15, verbose_name="Valor da Tarifa"
+                    ),
+                ),
+                (
+                    "moeda_tarifa",
+                    models.CharField(
+                        choices=[("BRL", "Real"), ("USD", "Dólar")],
+                        max_length=3,
+                        verbose_name="Moeda da Tarifa",
+                    ),
+                ),
+                (
+                    "parceiro",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="tarifas",
+                        to="operacoes.parceiro",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Configuração de Tarifa',
-                'verbose_name_plural': 'Configurações de Tarifa',
-                'unique_together': {('parceiro', 'tipo_pessoa', 'caminho')},
+                "verbose_name": "Configuração de Tarifa",
+                "verbose_name_plural": "Configurações de Tarifa",
+                "unique_together": {("parceiro", "tipo_pessoa", "caminho")},
             },
         ),
     ]
