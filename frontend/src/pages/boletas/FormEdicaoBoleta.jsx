@@ -4,6 +4,7 @@ import { useMoedas } from '../../hooks/useMoedas'
 import { useParceiros } from '../../hooks/useParceiros'
 import { useModalidades } from '../../hooks/useModalidades'
 import { useCriarSolicitacao } from '../../hooks/useSolicitacoes'
+import { usePtax } from '../../hooks/usePtax'
 import api from '../../api/axios'
 
 export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
@@ -12,6 +13,7 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
   const { data: modalidades } = useModalidades()
+  const { data: ptaxData } = usePtax()
   const criarSolicitacao = useCriarSolicitacao()
 
   const [clienteBusca, setClienteBusca] = useState(op.cliente.nome)
@@ -37,6 +39,15 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
     setValue('moeda_tarifa_negociada', op.moeda_tarifa_negociada || '')
     setValue('indicacao', op.indicacao || '')
   }, [op, setValue])
+
+  // Auto-preenche PTAX quando moeda muda
+  useEffect(() => {
+  if (moedaObj?.requer_ptax && ptaxData?.ptax) {
+    setValue('ptax', ptaxData.ptax)
+  } else if (moedaObj && !moedaObj.requer_ptax) {
+    setValue('ptax', '')
+  }
+}, [moedaObj, ptaxData, setValue])
 
   const moedaSelecionada = watch('moeda_id')
   const moedaObj = moedas?.find((m) => m.id === Number(moedaSelecionada))

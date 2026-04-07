@@ -9,6 +9,7 @@ from operacoes.routers.operacoes import router as operacoes_router
 from operacoes.routers.ptax import router as ptax_router
 from operacoes.routers.relatorios import router as relatorios_router
 from operacoes.routers.solicitacoes import router as solicitacoes_router
+from operacoes.routers.boletas_pdf import router as boletas_pdf_router
 from operacoes.routers.usuarios import router as usuarios_router
 
 api = NinjaAPI(
@@ -26,6 +27,7 @@ api.add_router("/dashboard", dashboard_router)
 api.add_router("/relatorios", relatorios_router)
 api.add_router("/solicitacoes", solicitacoes_router)
 api.add_router("/usuarios", usuarios_router)
+api.add_router("/boletas-pdf", boletas_pdf_router)
 
 
 @api.get("/me", response=dict, auth=JWTAuth())

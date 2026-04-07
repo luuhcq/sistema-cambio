@@ -50,6 +50,28 @@ export default function DetalheBoleta({ operacao, onFechar }) {
   const [sucessoSolicitacao, setSucessoSolicitacao] = useState('')
   const [integridade, setIntegridade] = useState(null)
   const [verificando, setVerificando] = useState(false)
+  const [baixandoCliente, setBaixandoCliente] = useState(false)
+  const [baixandoControle, setBaixandoControle] = useState(false)
+
+  const isGestor = user?.perfil === 'Gestor'
+  const confirmada = op.status === 'CONFIRMADA'
+
+  const baixarPdf = async (tipo, setBaixando) => {
+    setBaixando(true)
+    try {
+      const res = await api.get(`/boletas-pdf/${op.id}/${tipo}`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `boleta_${op.id}_${tipo}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // silencia — o browser mostra erro de rede se necessário
+    } finally {
+      setBaixando(false)
+    }
+  }
 
   const spreadNegativo = op.caminho === 'SAIDA'
     ? Number(op.taxa_cliente) < Number(op.spot)
@@ -89,6 +111,24 @@ export default function DetalheBoleta({ operacao, onFechar }) {
                 className="px-3 py-1.5 text-xs font-medium text-amber-600 border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
               >
                 Solicitar Edição
+              </button>
+            )}
+            <button
+              onClick={() => baixarPdf('cliente', setBaixandoCliente)}
+              disabled={!confirmada || baixandoCliente}
+              title={!confirmada ? 'Disponível apenas para boletas CONFIRMADAS' : 'Baixar PDF do Cliente'}
+              className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {baixandoCliente ? 'Baixando...' : 'Boleta Cliente'}
+            </button>
+            {isGestor && (
+              <button
+                onClick={() => baixarPdf('controle', setBaixandoControle)}
+                disabled={!confirmada || baixandoControle}
+                title={!confirmada ? 'Disponível apenas para boletas CONFIRMADAS' : 'Baixar PDF de Controle Interno'}
+                className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {baixandoControle ? 'Baixando...' : 'Boleta Controle'}
               </button>
             )}
             <button
