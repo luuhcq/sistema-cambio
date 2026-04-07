@@ -240,6 +240,32 @@ class SimulacaoOut(Schema):
     spread_negativo: bool
 
 
+# --- Métricas de Cliente ---
+class MoedaMetricaOut(Schema):
+    moeda: str
+    total_operacoes: int
+    volume_brl: Decimal
+
+
+class ParceiroMetricaOut(Schema):
+    parceiro: str
+    total_operacoes: int
+    volume_brl: Decimal
+
+
+class ClienteMetricasOut(Schema):
+    total_operacoes: int
+    volume_total_brl: Decimal
+    taxa_media_ponderada: Decimal | None
+    ticket_medio: Decimal | None
+    moedas_operadas: list[MoedaMetricaOut]
+    primeira_operacao: date | None
+    ultima_operacao: date | None
+    spread_medio: Decimal | None
+    comissao_total_liquida: Decimal
+    por_parceiro: list[ParceiroMetricaOut]
+
+
 # --- Solicitação de Edição ---
 class SolicitacaoEdicaoIn(Schema):
     operacao_id: int

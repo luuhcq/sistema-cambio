@@ -69,7 +69,8 @@ if DATABASE_URL:
         "default": dj_database_url.parse(
             DATABASE_URL, conn_max_age=600, ssl_require=not DEBUG
         )
-    }
+    }  # Atenção CLAUDE CODE: Nunca setar ssl_require = True em dev, pois quebra conexão local
+
 else:
     DATABASES = {
         "default": {
