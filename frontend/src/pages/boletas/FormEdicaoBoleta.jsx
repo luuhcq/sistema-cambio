@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMoedas } from '../../hooks/useMoedas'
 import { useParceiros } from '../../hooks/useParceiros'
 import { useModalidades } from '../../hooks/useModalidades'
+import { usePtax } from '../../hooks/usePtax'
 import { useCriarSolicitacao } from '../../hooks/useSolicitacoes'
 import { usePtax } from '../../hooks/usePtax'
 import api from '../../api/axios'
@@ -10,11 +11,15 @@ import api from '../../api/axios'
 export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
   const op = operacao
   const { register, handleSubmit, watch, setValue } = useForm()
+  const watchData = watch('data')
+  const watchMoeda = watch('moeda_id')
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
   const { data: modalidades } = useModalidades()
-  const { data: ptaxData } = usePtax()
+  const { data: ptaxData } = usePtax(watchData)
+  const { data: ptaxData } = usePtax(watchData)
   const criarSolicitacao = useCriarSolicitacao()
+  const userInteractedRef = useRef(false)
 
   const [clienteBusca, setClienteBusca] = useState(op.cliente.nome)
   const [clienteSelecionado, setClienteSelecionado] = useState(op.cliente)
@@ -38,6 +43,8 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
     setValue('tarifa_negociada', op.tarifa_negociada || '')
     setValue('moeda_tarifa_negociada', op.moeda_tarifa_negociada || '')
     setValue('indicacao', op.indicacao || '')
+    // Libera auto-fill após a população inicial
+    userInteractedRef.current = false
   }, [op, setValue])
 
   // Auto-preenche PTAX quando moeda muda
@@ -51,6 +58,20 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
 
   const moedaSelecionada = watch('moeda_id')
   const moedaObj = moedas?.find((m) => m.id === Number(moedaSelecionada))
+  const moedaObj = moedas?.find((m) => m.id === Number(watchMoeda))
+
+  // Auto-preenche PTAX apenas em mudanças explícitas de moeda ou data pelo usuário
+  useEffect(() => {
+    if (!userInteractedRef.current) return
+    if (!moedaObj || moedaObj.requer_ptax === false) {
+      setValue('ptax', '')
+      return
+    }
+    if (!watchData || watchData.length !== 10) return
+    if (ptaxData?.ptax) {
+      setValue('ptax', ptaxData.ptax)
+    }
+  }, [watchMoeda, watchData, ptaxData, moedaObj, setValue])
 
   // Busca clientes
   useEffect(() => {
@@ -118,7 +139,12 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className={labelClass}>Data</label>
-            <input type="date" {...register('data')} className={inputClass} />
+            <input
+              type="date"
+              {...register('data')}
+              onChange={(e) => { register('data').onChange(e); userInteractedRef.current = true }}
+              className={inputClass}
+            />
           </div>
 
           <div className="relative">
@@ -156,10 +182,30 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
 
           <div>
             <label className={labelClass}>Moeda</label>
-            <select {...register('moeda_id')} className={inputClass}>
-              {moedas?.map((m) => (
-                <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
-              ))}
+            <select
+              {...register('moeda_id')}
+              onChange={(e) => { register('moeda_id').onChange(e); userInteractedRef.current = true }}
+              className={inputClass}
+            >
+              {(() => {
+                if (!moedas) return null
+                const PRIORITARIAS = ['USD', 'EUR', 'GBP', 'CHF']
+                const topo = PRIORITARIAS.map((iso) => moedas.find((m) => m.codigo_iso === iso)).filter(Boolean)
+                const resto = moedas.filter((m) => !PRIORITARIAS.includes(m.codigo_iso))
+                return (
+                  <>
+                    {topo.map((m) => (
+                      <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
+                    ))}
+                    {resto.length > 0 && (
+                      <option disabled>───────────────</option>
+                    )}
+                    {resto.map((m) => (
+                      <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
+                    ))}
+                  </>
+                )
+              })()}
             </select>
           </div>
         </div>

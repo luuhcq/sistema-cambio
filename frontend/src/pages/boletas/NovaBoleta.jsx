@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMoedas } from '../../hooks/useMoedas'
 import { useParceiros } from '../../hooks/useParceiros'
@@ -12,10 +12,12 @@ import api from '../../api/axios'
 
 export default function NovaBoleta({ onSuccess, operacaoEditando }) {
   const isEdicao = !!operacaoEditando
+  const initialLoadDone = useRef(false)
   const { register, handleSubmit, watch, setValue, reset } = useForm()
+  const watchData = watch('data')
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
-  const { data: ptaxData } = usePtax()
+  const { data: ptaxData } = usePtax(watchData)
   const { data: modalidades } = useModalidades()
   const criarOperacao = useCriarOperacao()
   const editarOperacao = useEditarOperacao()
@@ -48,20 +50,23 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
       setClienteSelecionado(op.cliente)
       setClienteBusca(op.cliente.nome)
     }
+    initialLoadDone.current = true
   }, [operacaoEditando, setValue])
 
   const watchAll = watch()
   const moedaSelecionada = watch('moeda_id')
   const moedaObj = moedas?.find((m) => m.id === Number(moedaSelecionada))
 
-  // Auto-preenche PTAX quando moeda requer
+  // Auto-preenche PTAX quando moeda requer e data está preenchida.
+  // Bloqueia apenas no carregamento inicial em modo edição (não em mudanças subsequentes).
   useEffect(() => {
-    if (moedaObj?.requer_ptax && ptaxData?.ptax && !isEdicao) {
+    const bloqueadoPorCargaInicial = isEdicao && !initialLoadDone.current
+    if (moedaObj?.requer_ptax && ptaxData?.ptax && !bloqueadoPorCargaInicial && watchData?.length === 10) {
       setValue('ptax', ptaxData.ptax)
     } else if (moedaObj && !moedaObj.requer_ptax) {
       setValue('ptax', '')
     }
-  }, [moedaObj, ptaxData, setValue, isEdicao])
+  }, [moedaObj, ptaxData, setValue, isEdicao, watchData])
 
   // Busca clientes
   useEffect(() => {
@@ -210,9 +215,25 @@ export default function NovaBoleta({ onSuccess, operacaoEditando }) {
                 <label className={labelClass}>Moeda</label>
                 <select {...register('moeda_id', { required: true })} className={inputClass}>
                   <option value="">Selecione...</option>
-                  {moedas?.map((m) => (
-                    <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
-                  ))}
+                  {(() => {
+                    if (!moedas) return null
+                    const PRIORITARIAS = ['USD', 'EUR', 'GBP', 'CHF']
+                    const topo = PRIORITARIAS.map((iso) => moedas.find((m) => m.codigo_iso === iso)).filter(Boolean)
+                    const resto = moedas.filter((m) => !PRIORITARIAS.includes(m.codigo_iso))
+                    return (
+                      <>
+                        {topo.map((m) => (
+                          <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
+                        ))}
+                        {resto.length > 0 && (
+                          <option disabled>───────────────</option>
+                        )}
+                        {resto.map((m) => (
+                          <option key={m.id} value={m.id}>{m.codigo_iso} - {m.nome}</option>
+                        ))}
+                      </>
+                    )
+                  })()}
                 </select>
               </div>
             </div>

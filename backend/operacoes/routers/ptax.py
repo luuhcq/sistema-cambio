@@ -47,19 +47,23 @@ def _buscar_ptax_bcb(data_referencia: date):
 
 
 @router.get("/cotacao", response={200: dict, 503: dict})
-def buscar_ptax(request):
-    """Retorna a PTAX Venda de Fechamento do D-1."""
-    hoje = date.today()
+def buscar_ptax(request, data_boleta: str | None = None):
+    """Retorna a PTAX Venda de Fechamento do D-1 relativo à data da boleta."""
+    if data_boleta:
+        try:
+            data_referencia = date.fromisoformat(data_boleta) - timedelta(days=1)
+        except ValueError:
+            return 503, {"detail": "data_boleta inválida. Use YYYY-MM-DD."}
+    else:
+        data_referencia = date.today() - timedelta(days=1)
 
-    # Verifica cache
-    if hoje in _cache_ptax:
-        return 200, _cache_ptax[hoje]
+    if data_referencia in _cache_ptax:
+        return 200, _cache_ptax[data_referencia]
 
-    # D-1: começa do dia anterior
-    resultado = _buscar_ptax_bcb(hoje - timedelta(days=1))
+    resultado = _buscar_ptax_bcb(data_referencia)
 
     if resultado:
-        _cache_ptax[hoje] = resultado
+        _cache_ptax[data_referencia] = resultado
         return 200, resultado
 
     return 503, {"detail": "PTAX indisponível. Preencha manualmente."}

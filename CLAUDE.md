@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack
 
-**Backend** (`backend/`): Django 6 + Django Ninja + PostgreSQL + simplejwt  
+**Backend** (`backend/`): Django 6 + Django Ninja + PostgreSQL + simplejwt
 **Frontend** (`frontend/`): React 19 + Vite + TailwindCSS v4 + TanStack Query + react-hook-form + zod
 
 API docs: `http://localhost:8000/api/docs`
@@ -16,6 +16,12 @@ API docs: `http://localhost:8000/api/docs`
 - **HMAC integrity** — every `Operacao` has `hash_integridade` (HMAC-SHA256 of `montante|taxa_cliente|spot|caminho|moeda`). Generated in `hmac_utils.gerar_hmac()`, requires `HMAC_SECRET_KEY` env var. Always regenerate when saving critical fields.
 - **Roles via Django Groups** — `Gestor`, `Operador`, `Auditor`. Use helpers in `operacoes/permissions.py`, not raw group checks. Superusers are treated as Gestor.
 - **CPF/CNPJ** — stored as digits only (formatting stripped on save). `Cliente.tipo` (`PF`/`PJ`) is auto-derived from document length.
+
+## Critical settings
+
+- **Never change `ssl_require = not DEBUG` in `core/settings.py`** —
+  setting it to `True` breaks local PostgreSQL connection.
+  Only change if explicitly instructed.
 
 ## Commands
 
@@ -82,3 +88,5 @@ Pages map 1:1 to routes: `/`, `/boletas`, `/clientes`, `/configuracoes`, `/solic
 ### Deployment
 
 Heroku-compatible. `Procfile` runs `collectstatic → migrate → criar_superuser → gunicorn`. WhiteNoise serves static files. `DATABASE_URL` requires SSL in production.
+
+
