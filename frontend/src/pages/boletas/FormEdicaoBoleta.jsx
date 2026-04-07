@@ -5,7 +5,6 @@ import { useParceiros } from '../../hooks/useParceiros'
 import { useModalidades } from '../../hooks/useModalidades'
 import { usePtax } from '../../hooks/usePtax'
 import { useCriarSolicitacao } from '../../hooks/useSolicitacoes'
-import { usePtax } from '../../hooks/usePtax'
 import api from '../../api/axios'
 
 export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
@@ -16,7 +15,6 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
   const { data: moedas } = useMoedas()
   const { data: parceiros } = useParceiros()
   const { data: modalidades } = useModalidades()
-  const { data: ptaxData } = usePtax(watchData)
   const { data: ptaxData } = usePtax(watchData)
   const criarSolicitacao = useCriarSolicitacao()
   const userInteractedRef = useRef(false)
@@ -56,8 +54,6 @@ export default function FormEdicaoBoleta({ operacao, onSuccess, onCancelar }) {
   }
 }, [moedaObj, ptaxData, setValue])
 
-  const moedaSelecionada = watch('moeda_id')
-  const moedaObj = moedas?.find((m) => m.id === Number(moedaSelecionada))
   const moedaObj = moedas?.find((m) => m.id === Number(watchMoeda))
 
   // Auto-preenche PTAX apenas em mudanças explícitas de moeda ou data pelo usuário
