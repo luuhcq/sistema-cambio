@@ -38,7 +38,7 @@ function formatCalc(campo, valor) {
   if (valor === null || valor === undefined) return '—'
   const num = Number(valor)
   if (campo === 'aliquota_iof') return `${(num * 100).toFixed(2).replace('.', ',')}%`
-  if (campo === 'spread') return `${num.toFixed(4).replace('.', ',')}%`
+  if (campo === 'spread') return `${num.toFixed(2).replace('.', ',')}%`
   if (['iof_nominal', 'tarifa_nominal', 'valor_base_brl', 'vet', 'comissao_bruta', 'comissao_liquida'].includes(campo)) {
     return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }

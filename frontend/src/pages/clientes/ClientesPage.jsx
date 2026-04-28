@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useListarClientes, useCriarCliente } from '../../hooks/useClientes'
 import { useClienteMetricas } from '../../hooks/useClienteMetricas'
+import { useMoedas } from '../../hooks/useMoedas'
+import { useParceiros } from '../../hooks/useParceiros'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
 
@@ -28,7 +30,6 @@ function SortIcon({ ativo, direcao }) {
 const CAMPO_LABELS = {
   total_operacoes: 'Total de Operações',
   volume_total_brl: 'Volume Total (BRL)',
-  taxa_media_ponderada: 'Taxa Média Ponderada',
   ticket_medio: 'Ticket Médio (BRL)',
   moedas_operadas: 'Moedas Operadas',
   primeira_operacao: 'Primeira Operação',
@@ -44,8 +45,7 @@ function formatarMetrica(campo, valor) {
   if (campo === 'volume_total_brl' || campo === 'ticket_medio' || campo === 'comissao_total_liquida') {
     return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
-  if (campo === 'taxa_media_ponderada') return String(valor)
-  if (campo === 'spread_medio') return `${valor}%`
+  if (campo === 'spread_medio') return `${Number(valor).toFixed(2).replace('.', ',')}%`
   if (campo === 'primeira_operacao' || campo === 'ultima_operacao') {
     const [y, m, d] = valor.split('-')
     return `${d}/${m}/${y}`
@@ -53,7 +53,7 @@ function formatarMetrica(campo, valor) {
   return valor
 }
 
-function ModalRelatorio({ cliente, dataInicio, dataFim, onFechar }) {
+function ModalRelatorio({ cliente, dataInicio, dataFim, moeda, parceiro, onFechar }) {
   const todosCampos = Object.keys(CAMPO_LABELS)
   const [camposSelecionados, setCamposSelecionados] = useState(todosCampos)
   const [formato, setFormato] = useState('pdf')
@@ -77,6 +77,8 @@ function ModalRelatorio({ cliente, dataInicio, dataFim, onFechar }) {
       const params = { formato, campos: camposSelecionados.join(',') }
       if (dataInicio) params.data_inicio = dataInicio
       if (dataFim) params.data_fim = dataFim
+      if (moeda) params.moeda = moeda
+      if (parceiro) params.parceiro = parceiro
 
       const response = await api.get(`/cadastros/clientes/${cliente.id}/relatorio`, {
         params,
@@ -167,16 +169,24 @@ function LinhaMetrica({ label, valor }) {
 function ModalPerfilCliente({ cliente, onFechar, isGestor }) {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [filtraMoeda, setFiltraMoeda] = useState('')
+  const [filtroParceiro, setFiltroParceiro] = useState('')
   const [mostrarRelatorio, setMostrarRelatorio] = useState(false)
+
+  const { data: moedas } = useMoedas()
+  const { data: parceiros } = useParceiros()
 
   const { data: metricas, isLoading } = useClienteMetricas(
     cliente.id,
     dataInicio || undefined,
     dataFim || undefined,
+    filtraMoeda || undefined,
+    filtroParceiro || undefined,
   )
 
   const inputClass =
     'px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
 
   return (
     <>
@@ -202,7 +212,7 @@ function ModalPerfilCliente({ cliente, onFechar, isGestor }) {
 
           <div className="p-6 space-y-5">
             {/* Filtro de período */}
-            <div className="flex gap-3 items-center">
+            <div className="flex flex-wrap gap-3 items-center">
               <label className="text-sm text-gray-500 dark:text-gray-400 shrink-0">Período:</label>
               <input
                 type="date"
@@ -219,6 +229,37 @@ function ModalPerfilCliente({ cliente, onFechar, isGestor }) {
               />
             </div>
 
+            {/* Filtros de moeda e parceiro */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <label className="text-sm text-gray-500 dark:text-gray-400 shrink-0">Moeda:</label>
+              <select
+                value={filtraMoeda}
+                onChange={(e) => setFiltraMoeda(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Todas</option>
+                {(moedas || []).map((m) => (
+                  <option key={m.codigo_iso} value={m.codigo_iso}>{m.codigo_iso}</option>
+                ))}
+              </select>
+
+              {isGestor && (
+                <>
+                  <label className="text-sm text-gray-500 dark:text-gray-400 shrink-0">Parceiro:</label>
+                  <select
+                    value={filtroParceiro}
+                    onChange={(e) => setFiltroParceiro(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Todos</option>
+                    {(parceiros || []).map((p) => (
+                      <option key={p.id} value={p.nome}>{p.nome}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+
             {/* Métricas */}
             {isLoading ? (
               <p className="text-sm text-gray-400">Carregando métricas...</p>
@@ -230,7 +271,6 @@ function ModalPerfilCliente({ cliente, onFechar, isGestor }) {
                   <LinhaMetrica label="Total de Operações" valor={formatarMetrica('total_operacoes', metricas.total_operacoes)} />
                   <LinhaMetrica label="Volume Total (BRL)" valor={formatarMetrica('volume_total_brl', metricas.volume_total_brl)} />
                   <LinhaMetrica label="Ticket Médio (BRL)" valor={formatarMetrica('ticket_medio', metricas.ticket_medio)} />
-                  <LinhaMetrica label="Taxa Média Ponderada" valor={formatarMetrica('taxa_media_ponderada', metricas.taxa_media_ponderada)} />
                   <LinhaMetrica label="Primeira Operação" valor={formatarMetrica('primeira_operacao', metricas.primeira_operacao)} />
                   <LinhaMetrica label="Última Operação" valor={formatarMetrica('ultima_operacao', metricas.ultima_operacao)} />
                 </div>
@@ -240,11 +280,23 @@ function ModalPerfilCliente({ cliente, onFechar, isGestor }) {
                   <div>
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Moedas Operadas</h3>
                     {metricas.moedas_operadas.map((m) => (
-                      <LinhaMetrica
-                        key={m.moeda}
-                        label={m.moeda}
-                        valor={`${m.total_operacoes} op. · R$ ${Number(m.volume_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                      />
+                      <div key={m.moeda}>
+                        <LinhaMetrica
+                          label={m.moeda}
+                          valor={`${m.total_operacoes} op. · R$ ${Number(m.volume_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                        />
+                        {m.taxa_media !== null && m.taxa_media !== undefined && (
+                          <div className="flex justify-between items-center pl-6 py-1.5 border-b border-gray-100 dark:border-gray-800">
+                            <span className="text-[0.8rem] text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+                              <span className="text-gray-300 dark:text-gray-600">↳</span>
+                              Taxa Média
+                            </span>
+                            <span className="text-[0.8rem] text-gray-600 dark:text-gray-300">
+                              R$ {Number(m.taxa_media).toFixed(4).replace('.', ',')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -295,6 +347,8 @@ function ModalPerfilCliente({ cliente, onFechar, isGestor }) {
           cliente={cliente}
           dataInicio={dataInicio || undefined}
           dataFim={dataFim || undefined}
+          moeda={filtraMoeda || undefined}
+          parceiro={filtroParceiro || undefined}
           onFechar={() => setMostrarRelatorio(false)}
         />
       )}

@@ -58,7 +58,7 @@ export default function PreviewCalculo({ data, isLoading }) {
         <Linha label="VET" valor={formatBRL(data.vet)} destaque />
         <Linha
           label="Spread"
-          valor={`${Number(data.spread_com_sinal) >= 0 ? '' : '−'}${Number(data.spread).toFixed(4)}%`}
+          valor={`${Number(data.spread_com_sinal) >= 0 ? '' : '−'}${Number(data.spread).toFixed(2)}%`}
           alerta={data.spread_negativo}
         />
         <Linha label="Comissão Bruta" valor={formatBRL(data.comissao_bruta)} />

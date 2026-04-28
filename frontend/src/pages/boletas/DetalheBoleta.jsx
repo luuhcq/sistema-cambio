@@ -187,7 +187,7 @@ export default function DetalheBoleta({ operacao, onFechar }) {
               <Campo label="PTAX D-1" valor={op.ptax ? Number(op.ptax).toFixed(6).replace('.', ',') : 'N/A'} />
               <Campo
                 label="Spread"
-                valor={`${spreadNegativo ? '−' : ''}${Number(op.spread).toFixed(4).replace('.', ',')}%`}
+                valor={`${spreadNegativo ? '−' : ''}${Number(op.spread).toFixed(2).replace('.', ',')}%`}
                 alerta={spreadNegativo}
               />
             </div>

@@ -245,6 +245,7 @@ class MoedaMetricaOut(Schema):
     moeda: str
     total_operacoes: int
     volume_brl: Decimal
+    taxa_media: Decimal | None
 
 
 class ParceiroMetricaOut(Schema):

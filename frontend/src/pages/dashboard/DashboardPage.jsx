@@ -117,8 +117,8 @@ export default function DashboardPage() {
         <Card titulo="Receita Líquida" valor={formatBRL(data?.receita_liquida || 0)} subtitulo="Após dedução de 5% de imposto" />
         <Card titulo="Total de Boletas" valor={data?.total_boletas || 0} />
         <Card titulo="Ticket Médio" valor={formatBRL(data?.ticket_medio || 0)} />
-        <Card titulo="Spread Médio Ponderado" valor={`${Number(data?.spread_medio || 0).toFixed(4).replace('.', ',')}%`} />
-        <Card titulo="Receita Média por Operação" valor={formatBRL(data?.receita_media_por_operacao || 0)} />
+        <Card titulo="Spread Médio" valor={`${Number(data?.spread_medio || 0).toFixed(2).replace('.', ',')}%`} />
+        <Card titulo="Receita Média" valor={formatBRL(data?.receita_media_por_operacao || 0)} />
 
         {/* Pendências inline */}
         {pendencias && (() => {
@@ -272,7 +272,7 @@ export default function DashboardPage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Top Clientes (Curva ABC)</h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Ranking de Clientes</h2>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">

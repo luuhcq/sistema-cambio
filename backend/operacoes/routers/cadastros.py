@@ -14,7 +14,6 @@ router = Router(tags=["Cadastros"], auth=JWTAuth())
 CAMPO_LABELS = {
     "total_operacoes": "Total de Operações",
     "volume_total_brl": "Volume Total (BRL)",
-    "taxa_media_ponderada": "Taxa Média Ponderada",
     "ticket_medio": "Ticket Médio (BRL)",
     "moedas_operadas": "Moedas Operadas",
     "primeira_operacao": "Primeira Operação",
@@ -25,7 +24,7 @@ CAMPO_LABELS = {
 }
 
 
-def _calcular_metricas(cliente, data_inicio=None, data_fim=None):
+def _calcular_metricas(cliente, data_inicio=None, data_fim=None, moeda=None, parceiro=None):
     qs = Operacao.objects.filter(
         cliente=cliente, status="CONFIRMADA"
     ).select_related("moeda", "parceiro")
@@ -33,6 +32,10 @@ def _calcular_metricas(cliente, data_inicio=None, data_fim=None):
         qs = qs.filter(data__gte=data_inicio)
     if data_fim:
         qs = qs.filter(data__lte=data_fim)
+    if moeda:
+        qs = qs.filter(moeda__codigo_iso=moeda)
+    if parceiro:
+        qs = qs.filter(parceiro__nome=parceiro)
 
     operacoes = list(qs)
     total = len(operacoes)
@@ -70,14 +73,24 @@ def _calcular_metricas(cliente, data_inicio=None, data_fim=None):
     moedas_map: dict = {}
     for op in operacoes:
         cod = op.moeda.codigo_iso
-        entry = moedas_map.setdefault(cod, {"total_operacoes": 0, "volume_brl": Decimal("0")})
+        entry = moedas_map.setdefault(
+            cod,
+            {"total_operacoes": 0, "volume_brl": Decimal("0"), "soma_taxa_montante": Decimal("0"), "soma_montante": Decimal("0")},
+        )
         entry["total_operacoes"] += 1
         entry["volume_brl"] += op.vet
+        entry["soma_taxa_montante"] += op.taxa_cliente * op.montante
+        entry["soma_montante"] += op.montante
     moedas_operadas = [
         {
             "moeda": k,
             "total_operacoes": v["total_operacoes"],
             "volume_brl": v["volume_brl"].quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            "taxa_media": (
+                (v["soma_taxa_montante"] / v["soma_montante"]).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+                if v["soma_montante"]
+                else None
+            ),
         }
         for k, v in moedas_map.items()
     ]
@@ -130,8 +143,6 @@ def _valor_texto(campo, valor):
         return str(valor)
     if campo in ("volume_total_brl", "ticket_medio", "comissao_total_liquida"):
         return f"R$ {valor:,.2f}"
-    if campo == "taxa_media_ponderada":
-        return str(valor)
     if campo == "spread_medio":
         return f"{valor}%"
     if campo in ("primeira_operacao", "ultima_operacao"):
@@ -139,10 +150,11 @@ def _valor_texto(campo, valor):
     if campo == "moedas_operadas":
         if not valor:
             return "—"
-        return "; ".join(
-            f"{m['moeda']}: {m['total_operacoes']} op. / R$ {m['volume_brl']:,.2f}"
-            for m in valor
-        )
+        partes = []
+        for m in valor:
+            taxa = f" / Taxa Média: R$ {m['taxa_media']:,.4f}" if m.get("taxa_media") is not None else ""
+            partes.append(f"{m['moeda']}: {m['total_operacoes']} op. / R$ {m['volume_brl']:,.2f}{taxa}")
+        return "; ".join(partes)
     if campo == "por_parceiro":
         if not valor:
             return "—"
@@ -317,12 +329,14 @@ def metricas_cliente(
     cliente_id: int,
     data_inicio: date_type | None = None,
     data_fim: date_type | None = None,
+    moeda: str | None = None,
+    parceiro: str | None = None,
 ):
     cliente = Cliente.objects.filter(id=cliente_id, ativo=True).first()
     if not cliente:
         return 404, {"detail": "Cliente não encontrado."}
 
-    dados = _calcular_metricas(cliente, data_inicio, data_fim)
+    dados = _calcular_metricas(cliente, data_inicio, data_fim, moeda, parceiro)
     return 200, ClienteMetricasOut(**dados)
 
 
@@ -334,6 +348,8 @@ def relatorio_cliente(
     campos: str = "",
     data_inicio: date_type | None = None,
     data_fim: date_type | None = None,
+    moeda: str | None = None,
+    parceiro: str | None = None,
 ):
     from operacoes.permissions import is_gestor
 
@@ -344,7 +360,7 @@ def relatorio_cliente(
     if not cliente:
         return HttpResponse(status=404)
 
-    metricas = _calcular_metricas(cliente, data_inicio, data_fim)
+    metricas = _calcular_metricas(cliente, data_inicio, data_fim, moeda, parceiro)
     campos_lista = [c.strip() for c in campos.split(",") if c.strip()] or list(CAMPO_LABELS.keys())
 
     if formato == "csv":
